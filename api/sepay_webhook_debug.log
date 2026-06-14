@@ -1,0 +1,17 @@
+[2025-06-01 18:43:00] [INFO] Received GET Webhook Data (from GET params): 
+[2025-06-01 18:43:00] [ERROR] Dữ liệu nhận được không hợp lệ: 
+[2025-06-01 18:46:16] [INFO] Received GET Webhook Data (from GET params): 
+[2025-06-01 18:46:16] [ERROR] Dữ liệu nhận được không hợp lệ: 
+[2025-06-01 18:46:18] [INFO] Received GET Webhook Data (from GET params): 
+[2025-06-01 18:46:18] [ERROR] Dữ liệu nhận được không hợp lệ: 
+[2025-06-01 23:07:19] [INFO] Received GET Webhook Data (from GET params): 
+[2025-06-01 23:07:19] [ERROR] Dữ liệu nhận được không hợp lệ: 
+[2025-06-01 23:11:16] [INFO] DEBUG: =========== New Webhook Request Start ===========
+[2025-06-01 23:11:16] [INFO] DEBUG: Request Method: GET
+[2025-06-01 23:11:16] [INFO] DEBUG: Request URI: /api/bank.php
+[2025-06-01 23:11:16] [INFO] DEBUG: Remote IP: 162.158.193.215
+[2025-06-01 23:11:16] [INFO] DEBUG: All Headers: {"cf-ray":"948ffc621b7be88a-HKG","x-forwarded-for":"36.50.135.149","Host":"ngocrongprivate.com","sec-fetch-mode":"navigate","accept-encoding":"gzip, br","cookie":"_ga=GA1.2.18899045.1748641759; _gid=GA1.2.1901378390.1748641759; PHPSESSID=eb0iij0f143isjklkp518nmppg; cf_clearance=IoVqrW6tVk_qoCPHG6HSamkyccTya6nOkYjIXiKIq90-1748794276-1.2.1.1-t7X6.hy5YURL34JzBi7rpf3MXoo3TbZBzNM3K7HBCma4aoIaX7PV5HDcg3WOT0uWppjCdAekSRIoyUnULu0pcor0cTpsBZJj9R6PohwEwfarEvkTezliAZcPC5ehzNLtG5Jev6LToWBURCMG.k04.JBjwnWthb9Nwq3iMAcqX0aQwCVqScq7IohsefYLL.Pjv6g4hguT8zKcAawtEOOGKgfWZg6KMGbsPz4f.K.QvdU8yfCL8v70Jg7HUC786u3x3ne4XNbO8mYs2hd2TZ8DdoqzegYMVJ2bceRkJQGy8NEIrXPQvWgRW0Rk0Dp4WUkem7APnqVi4_ObFRZlnN6C2yJOVltmddHKtBr1FcLmqmGZHlTe4MIEChpR1mRDcXYK","X-Forwarded-Proto":"https","cdn-loop":"cloudflare; loops=1","priority":"u=0, i","CF-Visitor":"{\"scheme\":\"https\"}","accept-language":"vi-VN,vi;q=0.9,fr-FR;q=0.8,fr;q=0.7,en-US;q=0.6,en;q=0.5","sec-fetch-dest":"document","CF-Connecting-IP":"36.50.135.149","CF-IPCountry":"VN","sec-fetch-user":"?1","Connection":"Keep-Alive","sec-ch-ua":"\"Google Chrome\";v=\"137\", \"Chromium\";v=\"137\", \"Not\/A)Brand\";v=\"24\"","sec-ch-ua-mobile":"?0","sec-ch-ua-full-version":"\"137.0.7151.56\"","sec-ch-ua-arch":"\"x86\"","sec-ch-ua-platform":"\"Windows\"","sec-ch-ua-platform-version":"\"12.0.0\"","sec-ch-ua-model":"\"\"","sec-ch-ua-bitness":"\"64\"","sec-ch-ua-full-version-list":"\"Google Chrome\";v=\"137.0.7151.56\", \"Chromium\";v=\"137.0.7151.56\", \"Not\/A)Brand\";v=\"24.0.0.0\"","dnt":"1","upgrade-insecure-requests":"1","user-agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/137.0.0.0 Safari\/537.36","accept":"text\/html,application\/xhtml+xml,application\/xml;q=0.9,image\/avif,image\/webp,image\/apng,*\/*;q=0.8,application\/signed-exchange;v=b3;q=0.7","sec-fetch-site":"same-origin"}
+[2025-06-01 23:11:16] [INFO] DEBUG: Raw input from php://input (length 0): [EMPTY]
+[2025-06-01 23:11:16] [INFO] DEBUG: ===================================================
+[2025-06-01 23:11:16] [INFO] Received GET Webhook Data (from GET params): 
+[2025-06-01 23:11:16] [ERROR] Dữ liệu nhận được không hợp lệ: 

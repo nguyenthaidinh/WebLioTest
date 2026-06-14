@@ -1,0 +1,263 @@
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #b3afaf;
+            color: white;
+            margin: 0;
+            padding: 0;
+        }
+
+        #box_forums {
+            width: 100%;
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 10px;
+            box-sizing: border-box;
+            background-color: transparent;
+        }
+
+        /* Forum Post Item */
+        .forum-post-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            background-color: FF9900; /* Nền tối hơn */
+            border: 1px solid #444; /* Viền nhẹ */
+            border-radius: 6px; /* Bo tròn góc nhẹ */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Thêm đổ bóng nhẹ */
+        }
+
+        /* Pinned Posts */
+        #stick .forum-post-item {
+            background: linear-gradient(to right, #f38500, #ffae42); /* Màu cam gradient cho bài ghim */
+            border-color: #e07000;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Avatar */
+        .post-avatar-wrapper {
+            width: 32px; /* Kích thước avatar */
+            height: 32px; /* Kích thước avatar */
+            flex-shrink: 0; /* Ngăn avatar bị co lại */
+            margin-right: 10px; /* Khoảng cách giữa avatar và nội dung */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%; /* Bo tròn avatar */
+            overflow: hidden; /* Đảm bảo ảnh không tràn ra ngoài hình tròn */
+            border: 1px solid rgba(255, 255, 255, 0.2); /* Viền avatar */
+        }
+
+        .post-avatar-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Đảm bảo ảnh bao phủ toàn bộ không gian */
+        }
+
+        /* Post Content (Title and Info) */
+        .post-content {
+            display: flex;
+            flex-direction: column; /* Xếp tiêu đề và thông tin theo cột */
+            flex-grow: 1; /* Cho phép chiếm hết không gian còn lại */
+            min-width: 0; /* Quan trọng để `text-overflow` hoạt động đúng */
+        }
+
+        .post-title-link {
+            color: #DC143C;
+            font-size: 14px; /* Kích thước font tiêu đề */
+            font-weight: bold;
+            text-decoration: none;
+            white-space: nowrap; /* Ngăn tiêu đề xuống dòng */
+            overflow: hidden; /* Ẩn phần bị tràn */
+            text-overflow: ellipsis; /* Hiển thị dấu ba chấm */
+            display: block; /* Cần thiết cho overflow */
+            max-width: 100%; /* Đảm bảo không tràn ra ngoài div cha */
+        }
+
+        .hot-icon {
+            vertical-align: middle;
+            margin-left: 5px;
+            height: 10px; /* Kích thước icon hot */
+            width: auto;
+        }
+
+        .post-meta-info {
+            font-size: 10px; /* Kích thước font thông tin */
+            color: #b0b0b0; /* Màu chữ cho thông tin */
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        .post-meta-info a {
+            color: #e0e0e0; /* Màu chữ tên người đăng */
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .post-meta-info i {
+            color: #c0c0c0; /* Màu chữ thời gian */
+            margin-left: 5px;
+        }
+
+        /* Pagination */
+        .pagination-container {
+            display: flex;
+            justify-content: flex-end; /* Căn phải */
+            align-items: center;
+            margin-top: 15px; /* Khoảng cách với danh sách bài viết */
+            padding: 0;
+            border: none;
+            background-color: transparent;
+        }
+
+        .pagination-container div:first-child { /* Ẩn phần tử không cần thiết */
+            display: none;
+        }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+        }
+
+        .pagination-item {
+            padding: 6px 12px;
+            border: 1px solid #b65d2f;
+            background: #b65d2f;
+            color: #fff;
+            margin-right: 5px;
+            border-radius: 4px;
+            font-size: 13px; /* Kích thước font phân trang */
+            text-decoration: none;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .pagination-item.active,
+        .pagination-item:hover {
+            background-color: #ffae42;
+            border-color: #ffae42;
+        }
+
+        /* Post Button Section */
+        .post-button-section {
+            text-align: center;
+            margin: 25px auto 0 auto; /* Căn giữa và thêm margin top/bottom */
+            max-width: 80px; /* Giới hạn chiều rộng, làm cho nó nhỏ gọn hơn */
+            background-color: #FF0000; /* Nền giống các bài viết */
+            border: 1px solid #FF0000; /* Viền */
+            border-radius: 6px; /* Bo tròn góc */
+            padding: 10px 10px; /* Padding bên trong */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Đổ bóng */
+        }
+
+        .post-button-section hr {
+            border: none;
+            border-top: 1px solid rgb(212, 255, 0);
+            width: 0%; /* Giảm chiều rộng của đường kẻ ngang */
+            margin: 2px;
+        }
+
+        .post-button-section a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .post-button-section span {
+            display: block;
+            font-weight: bold;
+            font-size: 13px; /* Giảm kích thước font chữ "Đăng Bài" */
+            color: white; /* Màu chữ xanh lá nổi bật */
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.5); /* Hiệu ứng đổ bóng chữ */
+        }
+
+        #user-info {
+    padding: 10px;
+    background-color: #f38500;
+    border: 1px solid #444;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    max-width: 250px;
+    margin: 10px auto 0px auto; /* Khoảng cách trên 10px, dưới 15px, căn giữa ngang */
+    box-sizing: border-box;
+    display: block; /* Đảm bảo block */
+}
+
+
+        .user-avatar {
+            width: 50px; /* Kích thước avatar trong khung user info */
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .user-details span {
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .user-details a {
+            color: white; /* Màu link trong user details */
+            text-decoration: none;
+            font-size: 12px;
+            margin-top: 5px;
+            display: inline-block;
+        }
+		#columns {
+    display: flex; /* Sử dụng flexbox để các item đứng cạnh nhau */
+    flex-wrap: wrap; /* Cho phép các item xuống dòng nếu không đủ chỗ */
+    justify-content: center; /* Căn giữa các item */
+    gap: 15px; /* Tạo khoảng cách giữa các figure */
+    padding: 10px; /* Thêm padding cho khung chính */
+    margin: 0 auto; /* Căn giữa khung chính */
+    max-width: 900px; /* Giới hạn chiều rộng tối đa của khung */
+}
+
+#columns figure {
+    /* Giảm kích thước khung của mỗi figure nếu cần */
+    flex: 0 0 auto; /* Không co giãn, không thu hẹp, kích thước tự động */
+    text-align: center;
+    /* Có thể thêm width hoặc max-width nếu muốn mỗi figure có khung nhỏ hơn */
+    /* width: 80px; */
+}
+
+#columns figure img {
+    height: 30px; /* Giảm nhẹ kích thước ảnh nếu muốn nhỏ hơn */
+    /* width: auto; giữ tỷ lệ */
+}
+
+#columns figure figcaption {
+    font-size: 11px; /* Giảm kích thước chữ trong chú thích */
+    line-height: 1.2; /* Điều chỉnh khoảng cách dòng nếu cần */
+    margin-top: 5px; /* Giảm khoảng cách giữa ảnh và chữ */
+}
+
+#columns figure figcaption a {
+    font-size: 11px; /* Đảm bảo chữ link cũng nhỏ */
+}
+
+/* Điều chỉnh thêm cho span màu đỏ */
+#columns figure figcaption span {
+    font-size: 11px;
+}
+
+/* Sửa lại ngắt dòng <br><br> không cần thiết */
+#columns figure figcaption br {
+    display: none; /* Ẩn các thẻ <br> không cần thiết */
+}
+
+/* Nếu bạn muốn có một khoảng cách nhỏ giữa các dòng text trong figcaption, hãy sử dụng margin-bottom */
+#columns figure figcaption span {
+    display: block; /* Để mỗi phần tử span và a nằm trên một dòng riêng */
+    margin-bottom: 2px;
+}
+#columns figure figcaption a {
+    display: block;
+    margin-bottom: 2px;
+}
+
+        
