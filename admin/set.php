@@ -24,7 +24,7 @@ if ($_user !== null) {
 	$user_arr = _fetch("SELECT * FROM account WHERE username='$_user'");
 
 	if (is_array($user_arr) && count($user_arr) <= 0) {
-		header("Location: /logout.php");
+		header("Location: /app/logout.php");
 		exit();
 	} else {
 		$_username = htmlspecialchars($user_arr['username']);
@@ -48,7 +48,7 @@ if ($_user !== null) {
 				break;
 		}
 		if ($_admin != 1 && $_is_admin != 1) {
-			echo '<script>alert("Bạn không phải là admin!"); window.location.href="../index"</script>';
+			echo '<script>alert("Bạn không phải là admin!"); window.location.href="../index.php"</script>';
 			exit;
 		}
 	}

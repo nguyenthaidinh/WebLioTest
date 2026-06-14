@@ -215,8 +215,8 @@ if ($is_logged_in) {
                                 <div class="menu2">
                                     <table width="100%" cellspacing="4">
                                         <tr class="menu">
-                                            <td><a href="/Trang-Chu">Trang Chủ</a></td>
-                                            <td><a href="/Gioi-Thieu">Giới Thiệu</a></td>
+                                            <td><a href="/trang-chu.php">Trang Chủ</a></td>
+                                            <td><a href="/gioi-thieu.php">Giới Thiệu</a></td>
                                             <td><a href="/forum.php" title="Diễn Đàn">Diễn Đàn</a></td>
                                             <td><a href="#">Fanpage</a></td>
                                         </tr>
@@ -244,13 +244,13 @@ if ($is_logged_in) {
                                             <div class="user-details"> <br>
                                                 <span>Xin chào: <?php echo htmlspecialchars($display_player_name); ?></span>
                                                 <span style="white-space: nowrap; color: yellow; font-weight: bold;">Số dư: <?php echo number_format($user_vnd); ?> VND</span>
-                                                <a href="/app/doi-mat-khau">Đổi mật khẩu</a> <br>
-                                                <a href="/app/logout">Đăng xuất</a> <br>
+                                                <a href="/app/doi-mat-khau.php">Đổi mật khẩu</a> <br>
+                                                <a href="/app/logout.php">Đăng xuất</a> <br>
 
                                                 <div class="center-buttons">
                                                     <div style="display: flex; justify-content: center; align-items: center; margin-top: 5px;">
-                                                        <a href="/app/nap-vang" style="color: cyan; transform: translateX(-21px); display: inline-block;">Nạp Vàng</a>
-                                                        <a href="/app/nap-ngoc" style="color: cyan; margin-left: 0px;">Nạp Tiền</a>
+                                                        <a href="/app/nap-vang.php" style="color: cyan; transform: translateX(-21px); display: inline-block;">Nạp Vàng</a>
+                                                        <a href="/app/nap-ngoc.php" style="color: cyan; margin-left: 0px;">Nạp Tiền</a>
                                                     </div>
                                                 </div>
                                             </div>

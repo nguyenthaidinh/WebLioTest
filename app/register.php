@@ -367,7 +367,7 @@
 							<button type="submit" id="button1" name="submit">Đăng Ký</button>
 							
 							<div class="register-link-container">
-								Đã có tài khoản? <a href="login">Đăng Nhập ngay</a>
+								Đã có tài khoản? <a href="login.php">Đăng Nhập ngay</a>
 							</div>
 						</form>
 					</div>

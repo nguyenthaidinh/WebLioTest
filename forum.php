@@ -104,8 +104,8 @@ $conn->close();
         <div id="user-info" style="color:white; text-align:center;">
             <div class="user-details"> <br>
                 <span>Xin chào: <?php echo htmlspecialchars($display_player_name); ?></span>
-                <a href="/app/doi-mat-khau">Đổi mật khẩu</a> <br>
-                <a href="/app/logout">Đăng xuất</a> <br>
+                <a href="/app/doi-mat-khau.php">Đổi mật khẩu</a> <br>
+                <a href="/app/logout.php">Đăng xuất</a> <br>
         </div>
 <?php else: ?>
     <div id="auth-buttons" class="box_button_login" style="width:100%; text-align:center; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">

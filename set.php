@@ -64,7 +64,7 @@ if ($_username_session !== null && $_user_id_session !== null) {
                 }
             } else {
                 session_destroy();
-                header("Location: /logout.php");
+                header("Location: /app/logout.php");
                 exit();
             }
         } else {

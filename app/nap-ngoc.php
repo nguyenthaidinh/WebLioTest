@@ -69,10 +69,10 @@ include_once '../data_nap_the.php';
                                     <table width="100%" cellspacing="4">
                                         <tr class="menu">
                                             <td>
-                                                <a href="/Trang-Chu">Trang Chủ</a>
+                                                <a href="/trang-chu.php">Trang Chủ</a>
                                             </td>
                                             <td>
-                                                <a href="/Gioi-Thieu">Giới Thiệu</a>
+                                                <a href="/gioi-thieu.php">Giới Thiệu</a>
                                             </td>
                                             <td>
                                                 <a href="/forum.php" title="Diễn Đàn">Diễn Đàn</a>
@@ -109,23 +109,23 @@ include_once '../data_nap_the.php';
                                             <div class="user-details"> <br>
                                                 <span style="font-weight: bold;">Xin chào: <?php echo htmlspecialchars($display_player_name); ?></span><br>
                                                 <span style="white-space: nowrap; color: yellow; font-weight: bold;">Số dư: <?php echo number_format($user_vnd, 0, ',', '.'); ?> VND</span><br>
-                                                <a href="/app/change-password" style="color: cyan;">Đổi mật khẩu</a> <br>
-                                                <a href="/app/logout" style="color: cyan;">Đăng xuất</a> <br>
+                                                <a href="/app/doi-mat-khau.php" style="color: cyan;">Đổi mật khẩu</a> <br>
+                                                <a href="/app/logout.php" style="color: cyan;">Đăng xuất</a> <br>
 
                                                 <div class="center-buttons">
                                                     <div style="display: flex; justify-content: center; align-items: center; margin-top: 5px;">
-                                                        <a href="/app/nap-vang" style="color: cyan; transform: translateX(-21px); display: inline-block;">Nạp Vàng</a>
-                                                        <a href="/app/nap-ngoc" style="color: cyan; margin-left: 0px;">Nạp Tiền</a>
+                                                        <a href="/app/nap-vang.php" style="color: cyan; transform: translateX(-21px); display: inline-block;">Nạp Vàng</a>
+                                                        <a href="/app/nap-ngoc.php" style="color: cyan; margin-left: 0px;">Nạp Tiền</a>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
                                     <?php else : ?>
                                         <div class="box_button_login" style="width:100%; position: relative; text-align:center;">
-                                            <a id="tab-login-btn" href="/app/login">
+                                            <a id="tab-login-btn" href="/app/login.php">
                                                 <button class="w3-button w3-red w3-small w3-hover-green">Đăng nhập</button>
                                             </a>
-                                            <a id="tab-register-btn" href="/app/register">
+                                            <a id="tab-register-btn" href="/app/register.php">
                                                 <button class="w3-button w3-blue w3-small w3-hover-green">Đăng ký</button>
                                             </a>
                                         </div>
