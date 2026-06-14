@@ -135,7 +135,7 @@ $user_vnd = 0;
 
 if ($is_logged_in) {
     $userId = $_SESSION['user_id'];
-    $stmt_user_info = $conn->prepare("SELECT username, email, active, last_login_time, last_login_ip, money, gem, registered_date FROM account WHERE id = ?");
+    $stmt_user_info = $conn->prepare("SELECT username, active, last_time_login, ip_address, vnd FROM account WHERE id = ?");
     if ($stmt_user_info) {
         $stmt_user_info->bind_param("i", $userId);
         $stmt_user_info->execute();
@@ -143,7 +143,7 @@ if ($is_logged_in) {
         if ($result_user_info->num_rows > 0) {
             $user_info = $result_user_info->fetch_assoc();
             $display_player_name = htmlspecialchars($user_info['username']);
-            $user_vnd = $user_info['money'];
+            $user_vnd = $user_info['vnd'];
         }
         $stmt_user_info->close();
     }
