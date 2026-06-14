@@ -1,5 +1,5 @@
 <?php
-$_domain = 'http://163.61.182.199'; // điền domain của sự kiện giới thiệu của bạn
+$_domain = 'http://nro.liodev.io.vn'; // điền domain của sự kiện giới thiệu của bạn
 $_IP = '163.61.182.199'; // IP hiển thị ở phần cuối trang
 
 // MySQL
