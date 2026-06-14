@@ -247,12 +247,14 @@ if ($is_logged_in) {
                                                 <a href="/app/doi-mat-khau.php">Đổi mật khẩu</a> <br>
                                                 <a href="/app/logout.php">Đăng xuất</a> <br>
 
+                                                <?php /* Ẩn nạp tiền/vàng
                                                 <div class="center-buttons">
                                                     <div style="display: flex; justify-content: center; align-items: center; margin-top: 5px;">
                                                         <a href="/app/nap-vang.php" style="color: cyan; transform: translateX(-21px); display: inline-block;">Nạp Vàng</a>
                                                         <a href="/app/nap-ngoc.php" style="color: cyan; margin-left: 0px;">Nạp Tiền</a>
                                                     </div>
                                                 </div>
+                                                */ ?>
                                             </div>
                                         </div>
                                     <?php else: ?>
