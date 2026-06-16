@@ -282,6 +282,9 @@ function recharge_status_label($status, $is_credited = 0) {
                                                 <a href="/app/doi-vang.php" style="color: cyan;">Đổi Thỏi Vàng</a><br>
                                                 <a href="/app/doi-mat-khau.php" style="color: cyan;">Đổi mật khẩu</a><br>
                                                 <a href="/app/logout.php" style="color: cyan;">Đăng xuất</a><br>
+                                                <?php if (!empty($is_admin_for_avatar)): ?>
+                                                    <a href="/admin/" style="color: cyan;">Admin</a><br>
+                                                <?php endif; ?>
                                             </div>
                                         </div>
                                     <?php else : ?>

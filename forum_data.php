@@ -56,7 +56,7 @@ if (isset($_SESSION['username'])) {
 
     $stmt_user_data = $conn->prepare("
         SELECT
-            a.id, a.vnd, a.admin,
+            a.id, a.vnd, a.admin, a.is_admin,
             p.name AS player_name, p.gender, p.head
         FROM
             account a
@@ -75,7 +75,7 @@ if (isset($_SESSION['username'])) {
             $user_vnd = $user_row['vnd'] ?? 0;
             $display_player_name = $user_row['player_name'] ?? $account_username;
             $player_gender_for_avatar = $user_row['gender'] ?? 0;
-            $is_admin_for_avatar = $user_row['admin'] ?? 0;
+            $is_admin_for_avatar = ((int)($user_row['admin'] ?? 0) === 1 || (int)($user_row['is_admin'] ?? 0) === 1) ? 1 : 0;
             $player_head_for_avatar = $user_row['head'] ?? 0;
 
             // Đảm bảo user_id được đặt trong session từ đây nếu nó chưa có

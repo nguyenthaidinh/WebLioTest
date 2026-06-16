@@ -108,6 +108,9 @@ $conn->close();
                 <a href="/app/doi-vang.php">Đổi Thỏi Vàng</a> <br>
                 <a href="/app/doi-mat-khau.php">Đổi mật khẩu</a> <br>
                 <a href="/app/logout.php">Đăng xuất</a> <br>
+                <?php if (!empty($is_admin_for_avatar)): ?>
+                    <a href="/admin/">Admin</a> <br>
+                <?php endif; ?>
         </div>
 <?php else: ?>
     <div id="auth-buttons" class="box_button_login" style="width:100%; text-align:center; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
