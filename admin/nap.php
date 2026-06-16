@@ -83,12 +83,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($amount <= 0 || $username === '') {
                     throw new Exception('Du lieu yeu cau khong hop le.');
                 }
+                $default_bonus_spins = intdiv($amount, 10000);
+                $posted_bonus_spins = $_POST['bonus_spins'] ?? $default_bonus_spins;
+                if (is_array($posted_bonus_spins)) {
+                    throw new Exception('So luot quay khong hop le.');
+                }
+                $bonus_spins = filter_var($posted_bonus_spins, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+                if ($bonus_spins === false || $bonus_spins > 1000000) {
+                    throw new Exception('So luot quay phai la so nguyen tu 0 den 1.000.000.');
+                }
 
-                $stmt_update_account = $conn->prepare("UPDATE account SET vnd = vnd + ?, tongnap = tongnap + ? WHERE username = ?");
+                $stmt_update_account = $conn->prepare("UPDATE account SET vnd = vnd + ?, tongnap = tongnap + ?, luotquay = luotquay + ? WHERE username = ?");
                 if (!$stmt_update_account) {
                     throw new Exception('Loi prepare cong tien: ' . $conn->error);
                 }
-                $stmt_update_account->bind_param("iis", $amount, $amount, $username);
+                $stmt_update_account->bind_param("iiis", $amount, $amount, $bonus_spins, $username);
                 $stmt_update_account->execute();
                 if ($stmt_update_account->affected_rows === 0) {
                     throw new Exception('Khong tim thay tai khoan de cong tien.');
@@ -104,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt_update_request->close();
 
                 $conn->commit();
-                $_alert = admin_set_alert('Da duyet va cong ' . number_format($amount, 0, ',', '.') . ' VND cho ' . $username . '.');
+                $_alert = admin_set_alert('Da duyet va cong ' . number_format($amount, 0, ',', '.') . ' VND, them ' . number_format($bonus_spins, 0, ',', '.') . ' luot quay cho ' . $username . '.');
             } catch (Exception $e) {
                 $conn->rollback();
                 $_alert = admin_set_alert($e->getMessage(), 'error');
@@ -188,6 +197,9 @@ $requests = $conn->query("
         .btn-action { border:0; border-radius:6px; padding:5px 10px; font-size:11px; font-weight:800; cursor:pointer; margin:2px; }
         .btn-approve { background:#16a34a; color:#fff; }
         .btn-reject { background:#dc2626; color:#fff; }
+        .approve-form { display:inline-flex; align-items:center; gap:5px; flex-wrap:wrap; }
+        .bonus-spin-input { width:76px; background:rgba(15,15,40,0.8); border:1px solid rgba(249,115,22,0.35); color:#fff; border-radius:6px; padding:5px 7px; font-size:11px; font-weight:800; }
+        .spin-unit { color:#febb12; font-size:10px; font-weight:800; }
         .admin-alert { border-radius:10px; padding:12px; margin-bottom:16px; font-weight:700; text-align:center; }
         .alert-success { background: rgba(34,197,94,0.15); color:#4ade80; border:1px solid rgba(34,197,94,0.3); }
         .alert-error { background: rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3); }
@@ -237,7 +249,10 @@ $requests = $conn->query("
                     </thead>
                     <tbody>
                         <?php while ($request = $requests->fetch_assoc()) : ?>
-                            <?php [$label, $class] = admin_recharge_status_label($request['status'], $request['is_credited']); ?>
+                            <?php
+                                [$label, $class] = admin_recharge_status_label($request['status'], $request['is_credited']);
+                                $default_bonus_spins = intdiv((int)$request['amount'], 10000);
+                            ?>
                             <tr>
                                 <td>#<?php echo (int)$request['id']; ?></td>
                                 <td><?php echo htmlspecialchars($request['username']); ?></td>
@@ -251,6 +266,8 @@ $requests = $conn->query("
                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                             <input type="hidden" name="request_id" value="<?php echo (int)$request['id']; ?>">
                                             <input type="hidden" name="action" value="approve">
+                                            <input class="bonus-spin-input" type="number" name="bonus_spins" min="0" step="1" value="<?php echo $default_bonus_spins; ?>" title="Luot quay cong them">
+                                            <span class="spin-unit">luot</span>
                                             <button type="submit" class="btn-action btn-approve">Duyệt</button>
                                         </form>
                                         <?php if (strtolower((string)$request['status']) !== 'rejected') : ?>

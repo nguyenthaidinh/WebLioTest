@@ -51,6 +51,7 @@ if ($_login == null) {
                     <a class="btn btn-main btn-sm" href="/admin/vatpham.php">BUFF VẬT PHẨM</a>
                     <a class="btn btn-main btn-sm" href="/admin/chiso.php">CỘNG CHỈ SỐ</a>
                     <a class="btn btn-main btn-sm" href="/admin/nap.php">CỘNG TIỀN</a>
+                    <a class="btn btn-main btn-sm" href="/admin/luotquay.php">LUOT QUAY</a>
                     <a class="btn btn-main btn-sm" href="/admin/giftcode.php">GIFT CODE</a>
                     <a class="btn btn-main btn-sm" href="/admin/users.php">NGƯỜI DÙNG</a>
                     <a class="btn btn-main btn-sm" href="/admin/players.php">NHÂN VẬT</a>

@@ -17,7 +17,7 @@ $qr_file_path = substr($qr_recharge_path, 0, 1) === '/'
     ? dirname(__DIR__) . $qr_recharge_path
     : dirname(__DIR__) . '/' . ltrim($qr_recharge_path, '/');
 $has_qr_image = is_file($qr_file_path);
-$transfer_content = $is_logged_in ? '[' . $account_username . '] nap tien' : 'Dang nhap de lay noi dung nap';
+$transfer_content = 'Hãy để mặc định';
 
 function recharge_status_label($status, $is_credited = 0) {
     $status = strtolower((string)$status);
@@ -282,6 +282,7 @@ function recharge_status_label($status, $is_credited = 0) {
                                                 <a href="/app/doi-vang.php" style="color: cyan;">Đổi Thỏi Vàng</a><br>
                                                 <a href="/app/doi-mat-khau.php" style="color: cyan;">Đổi mật khẩu</a><br>
                                                 <a href="/app/logout.php" style="color: cyan;">Đăng xuất</a><br>
+                                                <a href="/app/vong-quay.php" style="color: cyan;">Vong Quay May Man</a><br>
                                                 <?php if (!empty($is_admin_for_avatar)): ?>
                                                     <a href="/admin/" style="color: cyan;">Admin</a><br>
                                                 <?php endif; ?>
@@ -345,6 +346,7 @@ function recharge_status_label($status, $is_credited = 0) {
                                                             <span class="bank-value" id="transferContent"><?php echo htmlspecialchars($transfer_content); ?></span>
                                                             <button class="copy-btn" type="button" data-copy="<?php echo htmlspecialchars($transfer_content); ?>">Copy</button>
                                                         </div>
+                                                        <p class="recharge-note">Moi 10.000 VND nap thanh cong se duoc cong 1 luot quay may man.</p>
                                                         <p class="recharge-note">Sau khi chuyển khoản, nhập số tiền và mã giao dịch/nội dung chuyển khoản để admin kiểm tra rồi duyệt VND.</p>
                                                     </div>
                                                 </div>

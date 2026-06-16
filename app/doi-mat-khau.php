@@ -257,6 +257,7 @@ if ($is_logged_in) {
                                                     </div>
                                                 </div>
                                                 */ ?>
+                                                <a href="/app/vong-quay.php">Vong Quay May Man</a> <br>
                                             </div>
                                         </div>
                                     <?php else: ?>
