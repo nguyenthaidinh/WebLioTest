@@ -104,6 +104,8 @@ $conn->close();
         <div id="user-info" style="color:white; text-align:center;">
             <div class="user-details"> <br>
                 <span>Xin chào: <?php echo htmlspecialchars($display_player_name); ?></span>
+                <a href="/app/nap-ngoc.php">Nạp Tiền</a> <br>
+                <a href="/app/doi-vang.php">Đổi Thỏi Vàng</a> <br>
                 <a href="/app/doi-mat-khau.php">Đổi mật khẩu</a> <br>
                 <a href="/app/logout.php">Đăng xuất</a> <br>
         </div>

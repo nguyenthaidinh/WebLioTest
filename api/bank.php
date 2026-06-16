@@ -170,8 +170,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'GET
     $final_status = 'pending';
 
     if ($status === 'success') {
-        $final_status = 'success';
-        $is_credited = 1;
+        $final_status = $is_top_up_transaction ? 'pending' : 'success';
+        $is_credited = 0;
     } elseif ($status === 'failed' || $status === 'error') {
         $final_status = 'failed';
     } else {
@@ -213,25 +213,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'GET
         exit();
     }
 
-    // --- CỘNG TIỀN VÀ TỔNG NẠP VÀO TÀI KHOẢN NGƯỜI DÙNG ---
-    if ($is_credited === 1 && $is_top_up_transaction) {
-        // Cập nhật cả 'vnd' và 'tongnap' trong bảng `account`
-        $stmt_update_user_balance = $conn->prepare("UPDATE `account` SET vnd = vnd + ?, tongnap = tongnap + ? WHERE username = ?");
-        if ($stmt_update_user_balance) {
-            $stmt_update_user_balance->bind_param("iis", $amount, $amount, $username_from_description); // amount cho vnd và tongnap
-            if ($stmt_update_user_balance->execute()) {
-                $response['status'] = 'success';
-                $response['message'] = 'Nạp tiền thành công! Tiền đã được cộng vào tài khoản ' . $username_from_description . '.';
-                log_activity("Nạp tiền thành công: " . $amount . " VNĐ đã được cộng vào tài khoản " . $username_from_description . " (Transaction ID: " . $transaction_id . ")", 'INFO');
-            } else {
-                $response['message'] = 'Lỗi khi cộng tiền vào tài khoản người dùng. Vui lòng liên hệ hỗ trợ.';
-                log_activity("Lỗi execute UPDATE số dư người dùng (vnd, tongnap): " . $stmt_update_user_balance->error . " - Transaction ID: " . $transaction_id, 'ERROR');
-            }
-            $stmt_update_user_balance->close();
-        } else {
-            log_activity("Lỗi prepare UPDATE số dư người dùng (vnd, tongnap): " . $conn->error, 'ERROR');
-            $response['message'] = 'Lỗi hệ thống khi chuẩn bị cập nhật số dư người dùng.';
-        }
+    // Khong tu dong cong tien. Admin duyet tai /admin/nap.php moi cap nhat vnd/tongnap.
+    if ($is_top_up_transaction && $final_status === 'pending') {
+        $response['status'] = 'success';
+        $response['message'] = 'Giao dich da duoc ghi nhan va dang cho admin duyet.';
+        log_activity("Giao dich nap tien dang cho admin duyet: " . $amount . " VND cho " . $username_from_description . " (Transaction ID: " . $transaction_id . ")", 'INFO');
     } else {
         // Giao dịch không thành công hoặc không phải giao dịch nạp tiền, chỉ ghi nhận vào log
         $response['status'] = 'success'; // Trả về success để SePay không gửi lại webhook nếu không phải lỗi của bạn
