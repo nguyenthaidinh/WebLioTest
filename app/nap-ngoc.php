@@ -282,7 +282,7 @@ function recharge_status_label($status, $is_credited = 0) {
                                                 <a href="/app/doi-vang.php" style="color: cyan;">Đổi Thỏi Vàng</a><br>
                                                 <a href="/app/doi-mat-khau.php" style="color: cyan;">Đổi mật khẩu</a><br>
                                                 <a href="/app/logout.php" style="color: cyan;">Đăng xuất</a><br>
-                                                <a href="/app/vong-quay.php" style="color: cyan;">Vong Quay May Man</a><br>
+                                                <a href="/app/vong-quay.php" style="color: cyan;">Vòng Quay May Mắn</a><br>
                                                 <?php if (!empty($is_admin_for_avatar)): ?>
                                                     <a href="/admin/" style="color: cyan;">Admin</a><br>
                                                 <?php endif; ?>
@@ -346,7 +346,7 @@ function recharge_status_label($status, $is_credited = 0) {
                                                             <span class="bank-value" id="transferContent"><?php echo htmlspecialchars($transfer_content); ?></span>
                                                             <button class="copy-btn" type="button" data-copy="<?php echo htmlspecialchars($transfer_content); ?>">Copy</button>
                                                         </div>
-                                                        <p class="recharge-note">Moi 10.000 VND nap thanh cong se duoc cong 1 luot quay may man.</p>
+                                                        <p class="recharge-note">Tích lũy 10.000 = 1 lượt quay may mắn.</p>
                                                         <p class="recharge-note">Sau khi chuyển khoản, nhập số tiền và mã giao dịch/nội dung chuyển khoản để admin kiểm tra rồi duyệt VND.</p>
                                                     </div>
                                                 </div>

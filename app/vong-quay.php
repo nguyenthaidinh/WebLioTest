@@ -10,7 +10,7 @@ const LUCKY_GOLD_ITEM_ID = 457;
 const CHECKIN_SPIN_REWARD = 1;
 
 $lucky_rewards = [
-    ['label' => 'Chuc may man', 'amount' => 0, 'weight' => 3000, 'color' => '#64748b'],
+    ['label' => 'Chúc may mắn', 'amount' => 0, 'weight' => 3000, 'color' => '#64748b'],
     ['label' => '10 TV', 'amount' => 10, 'weight' => 3000, 'color' => '#22c55e'],
     ['label' => '20 TV', 'amount' => 20, 'weight' => 2200, 'color' => '#14b8a6'],
     ['label' => '50 TV', 'amount' => 50, 'weight' => 800, 'color' => '#3b82f6'],
@@ -23,16 +23,20 @@ $lucky_rewards = [
 
 $message = $_SESSION['lucky_spin_message'] ?? '';
 $message_type = $_SESSION['lucky_spin_message_type'] ?? '';
-unset($_SESSION['lucky_spin_message'], $_SESSION['lucky_spin_message_type']);
+$spin_result = $_SESSION['lucky_spin_result'] ?? null;
+unset($_SESSION['lucky_spin_message'], $_SESSION['lucky_spin_message_type'], $_SESSION['lucky_spin_result']);
 
 if (empty($_SESSION['lucky_spin_csrf_token'])) {
     $_SESSION['lucky_spin_csrf_token'] = bin2hex(random_bytes(32));
 }
 $csrf_token = $_SESSION['lucky_spin_csrf_token'];
 
-function lucky_set_message($message, $type = 'error') {
+function lucky_set_message($message, $type = 'error', $result = null) {
     $_SESSION['lucky_spin_message'] = $message;
     $_SESSION['lucky_spin_message_type'] = $type;
+    if ($result !== null) {
+        $_SESSION['lucky_spin_result'] = $result;
+    }
 }
 
 function lucky_ensure_checkin_table($conn) {
@@ -48,7 +52,7 @@ function lucky_ensure_checkin_table($conn) {
     ";
 
     if (!$conn->query($sql)) {
-        throw new Exception('Khong the khoi tao bang diem danh: ' . $conn->error);
+        throw new Exception('Không thể khởi tạo bảng điểm danh: ' . $conn->error);
     }
 }
 
@@ -186,7 +190,7 @@ function lucky_has_checked_in_today($conn, $account_id) {
 
 function lucky_handle_daily_checkin($conn, $account_id) {
     if (!$account_id) {
-        throw new Exception('Khong tim thay tai khoan.');
+        throw new Exception('Không tìm thấy tài khoản.');
     }
 
     $today = date('Y-m-d');
@@ -204,21 +208,21 @@ function lucky_handle_daily_checkin($conn, $account_id) {
             $error_message = $stmt_checkin->error;
             $stmt_checkin->close();
             if ($error_no === 1062) {
-                throw new Exception('Hom nay ban da diem danh roi.');
+                throw new Exception('Hôm nay bạn đã điểm danh rồi.');
             }
-            throw new Exception('Khong the diem danh: ' . $error_message);
+            throw new Exception('Không thể điểm danh: ' . $error_message);
         }
         $stmt_checkin->close();
 
         $stmt_update = $conn->prepare("UPDATE account SET luotquay = luotquay + ? WHERE id = ?");
         if (!$stmt_update) {
-            throw new Exception('Loi prepare cong luot quay: ' . $conn->error);
+            throw new Exception('Lỗi prepare cộng lượt quay: ' . $conn->error);
         }
         $spin_reward = CHECKIN_SPIN_REWARD;
         $stmt_update->bind_param("ii", $spin_reward, $account_id);
         if (!$stmt_update->execute() || $stmt_update->affected_rows === 0) {
             $stmt_update->close();
-            throw new Exception('Khong the cong luot quay.');
+            throw new Exception('Không thể cộng lượt quay.');
         }
         $stmt_update->close();
 
@@ -232,7 +236,7 @@ function lucky_handle_daily_checkin($conn, $account_id) {
 
 function lucky_handle_spin($conn, $account_id, $rewards) {
     if (!$account_id) {
-        throw new Exception('Khong tim thay tai khoan.');
+        throw new Exception('Không tìm thấy tài khoản.');
     }
 
     $conn->begin_transaction();
@@ -254,7 +258,7 @@ function lucky_handle_spin($conn, $account_id, $rewards) {
 
         $current_spins = (int)($account['luotquay'] ?? 0);
         if ($current_spins <= 0) {
-            throw new Exception('Ban chua co luot quay.');
+            throw new Exception('Bạn chưa có lượt quay.');
         }
 
         $reward = lucky_pick_reward($rewards);
@@ -267,7 +271,7 @@ function lucky_handle_spin($conn, $account_id, $rewards) {
         $stmt_update->bind_param("ii", $reward_amount, $account_id);
         if (!$stmt_update->execute() || $stmt_update->affected_rows === 0) {
             $stmt_update->close();
-            throw new Exception('Khong the tru luot quay.');
+            throw new Exception('Không thể trừ lượt quay.');
         }
         $stmt_update->close();
 
@@ -285,19 +289,19 @@ function lucky_handle_withdraw_gold($conn, $account_id, $player_id) {
     $amount = (int)($_POST['withdraw_amount'] ?? 0);
 
     if (!$account_id) {
-        throw new Exception('Khong tim thay tai khoan.');
+        throw new Exception('Không tìm thấy tài khoản.');
     }
 
     if (!$player_id) {
-        throw new Exception('Ban chua co nhan vat trong game.');
+        throw new Exception('Bạn chưa có nhân vật trong game.');
     }
 
     if ($amount <= 0) {
-        throw new Exception('So thoi vang rut phai lon hon 0.');
+        throw new Exception('Số thỏi vàng rút phải lớn hơn 0.');
     }
 
     if ($amount > 1000000) {
-        throw new Exception('So thoi vang moi lan rut qua lon.');
+        throw new Exception('Số thỏi vàng mỗi lần rút quá lớn.');
     }
 
     $conn->begin_transaction();
@@ -305,7 +309,7 @@ function lucky_handle_withdraw_gold($conn, $account_id, $player_id) {
     try {
         $stmt_account = $conn->prepare("SELECT thoi_vang FROM account WHERE id = ? FOR UPDATE");
         if (!$stmt_account) {
-            throw new Exception('Loi prepare kho thoi vang: ' . $conn->error);
+            throw new Exception('Lỗi prepare kho thỏi vàng: ' . $conn->error);
         }
         $stmt_account->bind_param("i", $account_id);
         $stmt_account->execute();
@@ -319,7 +323,7 @@ function lucky_handle_withdraw_gold($conn, $account_id, $player_id) {
 
         $current_gold = (int)($account['thoi_vang'] ?? 0);
         if ($current_gold < $amount) {
-            throw new Exception('Kho thoi vang khong du de rut.');
+            throw new Exception('Kho thỏi vàng không đủ để rút.');
         }
 
         $stmt_player = $conn->prepare("SELECT items_bag FROM player WHERE id = ? AND account_id = ? FOR UPDATE");
@@ -333,7 +337,7 @@ function lucky_handle_withdraw_gold($conn, $account_id, $player_id) {
         $stmt_player->close();
 
         if (!$player) {
-            throw new Exception('Nhan vat khong ton tai hoac khong thuoc tai khoan nay.');
+            throw new Exception('Nhân vật không tồn tại hoặc không thuộc tài khoản này.');
         }
 
         $items = lucky_decode_items_bag($player['items_bag'] ?? '[]');
@@ -341,28 +345,28 @@ function lucky_handle_withdraw_gold($conn, $account_id, $player_id) {
         $new_items_bag = lucky_encode_items_bag($items);
 
         if ($new_items_bag === false || json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception('Khong the ma hoa tui do.');
+            throw new Exception('Không thể mã hóa túi đồ.');
         }
 
         $stmt_update_account = $conn->prepare("UPDATE account SET thoi_vang = thoi_vang - ? WHERE id = ? AND thoi_vang >= ?");
         if (!$stmt_update_account) {
-            throw new Exception('Loi prepare tru kho thoi vang: ' . $conn->error);
+            throw new Exception('Lỗi prepare trừ kho thỏi vàng: ' . $conn->error);
         }
         $stmt_update_account->bind_param("iii", $amount, $account_id, $amount);
         if (!$stmt_update_account->execute() || $stmt_update_account->affected_rows === 0) {
             $stmt_update_account->close();
-            throw new Exception('Khong the tru kho thoi vang.');
+            throw new Exception('Không thể trừ kho thỏi vàng.');
         }
         $stmt_update_account->close();
 
         $stmt_update_bag = $conn->prepare("UPDATE player SET items_bag = ? WHERE id = ? AND account_id = ?");
         if (!$stmt_update_bag) {
-            throw new Exception('Loi prepare cap nhat tui do: ' . $conn->error);
+            throw new Exception('Lỗi prepare cập nhật túi đồ: ' . $conn->error);
         }
         $stmt_update_bag->bind_param("sii", $new_items_bag, $player_id, $account_id);
         if (!$stmt_update_bag->execute()) {
             $stmt_update_bag->close();
-            throw new Exception('Khong the cap nhat tui do.');
+            throw new Exception('Không thể cập nhật túi đồ.');
         }
         $stmt_update_bag->close();
 
@@ -391,26 +395,34 @@ if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $posted_token = $_POST['csrf_token'] ?? '';
         if (!is_string($posted_token) || !hash_equals($csrf_token, $posted_token)) {
-            throw new Exception('Phien thao tac khong hop le, vui long tai lai trang.');
+            throw new Exception('Phiên thao tác không hợp lệ, vui lòng tải lại trang.');
         }
 
         $action = $_POST['action'] ?? '';
         if ($action === 'daily_checkin') {
             if (!$checkin_table_ready) {
-                throw new Exception('Diem danh tam thoi chua san sang.');
+                throw new Exception('Điểm danh tạm thời chưa sẵn sàng.');
             }
             $spin_reward = lucky_handle_daily_checkin($conn, $account_id);
-            lucky_set_message('Diem danh thanh cong, ban nhan ' . $spin_reward . ' luot quay.', 'success');
+            lucky_set_message('Điểm danh thành công, bạn nhận ' . $spin_reward . ' lượt quay.', 'success');
         } elseif ($action === 'lucky_spin') {
             $reward = lucky_handle_spin($conn, $account_id, $lucky_rewards);
             if ((int)$reward['amount'] > 0) {
-                lucky_set_message('Chuc mung! Ban nhan duoc ' . $reward['label'] . '. Thoi vang da vao kho cho rut.', 'success');
+                lucky_set_message(
+                    'Chúc mừng! Bạn trúng ' . $reward['label'] . '.',
+                    'success',
+                    ['type' => 'win', 'label' => $reward['label'], 'amount' => (int)$reward['amount']]
+                );
             } else {
-                lucky_set_message('Chuc may man lan sau.', 'warning');
+                lucky_set_message(
+                    'Chúc may mắn lần sau.',
+                    'warning',
+                    ['type' => 'miss', 'label' => $reward['label'], 'amount' => 0]
+                );
             }
         } elseif ($action === 'withdraw_gold') {
             $withdrawn_amount = lucky_handle_withdraw_gold($conn, $account_id, $current_player_id);
-            lucky_set_message('Rut thanh cong ' . number_format($withdrawn_amount, 0, ',', '.') . ' TV vao tui do.', 'success');
+            lucky_set_message('Rút thành công ' . number_format($withdrawn_amount, 0, ',', '.') . ' TV vào túi đồ.', 'success');
         } else {
             throw new Exception('Thao tac khong hop le.');
         }
@@ -443,7 +455,7 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vong Quay May Man - Chu Be Rong Online</title>
+    <title>Vòng Quay May Mắn - Chú Bé Rồng Online</title>
     <link rel="icon" href="/images/favicon-48x48.ico" type="image/x-icon">
     <link rel="stylesheet" href="/view/static/css/template.css?v=1.10">
     <link rel="stylesheet" href="/view/static/css/w3.css?v=1.01">
@@ -496,7 +508,100 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
             justify-content: center;
             gap: 8px;
             flex-wrap: wrap;
-            margin: 10px 0 12px;
+            margin: 12px 0 12px;
+        }
+        .spin-result-card {
+            position: relative;
+            overflow: hidden;
+            max-width: 520px;
+            margin: 12px auto 14px;
+            border-radius: 10px;
+            padding: 14px;
+            border: 1px solid rgba(250, 204, 21, 0.8);
+            background: linear-gradient(135deg, #fff7cc 0%, #fff 42%, #ffedd5 100%);
+            box-shadow: 0 8px 22px rgba(180, 83, 9, 0.25);
+            color: #7c2d12;
+        }
+        .spin-result-card::before {
+            content: "";
+            position: absolute;
+            inset: -40% auto auto -20%;
+            width: 180px;
+            height: 180px;
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.45), transparent 68%);
+            pointer-events: none;
+        }
+        .spin-result-card.miss {
+            border-color: rgba(148, 163, 184, 0.55);
+            background: linear-gradient(135deg, #f8fafc 0%, #fff 55%, #e2e8f0 100%);
+            box-shadow: 0 8px 18px rgba(51, 65, 85, 0.16);
+        }
+        .result-eyebrow {
+            position: relative;
+            display: inline-block;
+            border-radius: 999px;
+            padding: 4px 11px;
+            background: #7c2d12;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+        .spin-result-card.miss .result-eyebrow {
+            background: #64748b;
+        }
+        .result-title {
+            position: relative;
+            margin-top: 8px;
+            font-size: 16px;
+            font-weight: 900;
+            color: #7c2d12;
+        }
+        .result-prize {
+            position: relative;
+            margin-top: 6px;
+            font-size: 30px;
+            line-height: 1;
+            font-weight: 900;
+            color: #ea580c;
+            text-shadow: 0 2px 0 rgba(255,255,255,0.9);
+        }
+        .spin-result-card.miss .result-prize {
+            font-size: 22px;
+            color: #475569;
+        }
+        .result-desc {
+            position: relative;
+            margin: 8px auto 0;
+            color: #7c2d12;
+            font-size: 12px;
+            font-weight: 800;
+            max-width: 420px;
+        }
+        .result-actions {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .result-link {
+            border: 0;
+            border-radius: 6px;
+            background: #f97316;
+            color: #fff;
+            font-weight: 900;
+            padding: 8px 12px;
+            text-decoration: none;
+            font-size: 12px;
+        }
+        .result-link.secondary {
+            background: #7c2d12;
+        }
+        .result-link:hover {
+            color: #fff;
+            text-decoration: none;
         }
         .wheel-area {
             position: relative;
@@ -585,11 +690,12 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
         .checkin-button,
         .withdraw-button {
             border: 0;
-            border-radius: 6px;
+            border-radius: 8px;
             color: #fff;
             font-weight: 900;
-            padding: 10px 16px;
+            padding: 11px 18px;
             cursor: pointer;
+            box-shadow: 0 5px 12px rgba(124,45,18,0.16);
         }
         .spin-button {
             background: #f97316;
@@ -607,12 +713,13 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
             cursor: not-allowed;
         }
         .withdraw-box {
-            background: #fff;
+            background: linear-gradient(180deg, #fff 0%, #fff8ec 100%);
             border: 1px solid #f0c27b;
-            border-radius: 8px;
-            padding: 10px;
+            border-radius: 10px;
+            padding: 12px;
             margin: 12px auto;
-            max-width: 360px;
+            max-width: 410px;
+            box-shadow: 0 5px 14px rgba(124,45,18,0.12);
         }
         .withdraw-box strong {
             color: #7c2d12;
@@ -687,8 +794,8 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
                         <div class="menu2" style="background: #561d00;">
                             <table width="100%" border="0" cellspacing="4">
                                 <tr class="menu">
-                                    <td><a href="/">Trang Chu</a></td>
-                                    <td><a href="/forum.php">Dien Dan</a></td>
+                                    <td><a href="/">Trang Chủ</a></td>
+                                    <td><a href="/forum.php">Diễn Đàn</a></td>
                                 </tr>
                             </table>
                         </div>
@@ -696,25 +803,53 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
                         <div class="body">
                             <div class="lucky-wrap">
                                 <div class="lucky-panel">
-                                    <h2>Vong Quay May Man</h2>
+                                    <h2>Vòng Quay May Mắn</h2>
 
                                     <?php if (!$is_logged_in): ?>
-                                        <div class="message error">Ban can dang nhap de quay.</div>
-                                        <div class="quick-links"><a href="/app/login.php">Dang nhap</a></div>
+                                        <div class="message error">Bạn cần đăng nhập để quay.</div>
+                                        <div class="quick-links"><a href="/app/login.php">Đăng nhập</a></div>
                                     <?php else: ?>
                                         <div class="lucky-status">
-                                            <span>Nhan vat: <?php echo htmlspecialchars($player_name); ?></span>
-                                            <span>Luot quay: <?php echo number_format($remaining_spins, 0, ',', '.'); ?></span>
-                                            <span>TV cho rut: <?php echo number_format($pending_gold, 0, ',', '.'); ?></span>
-                                            <span><?php echo $checked_in_today ? 'Da diem danh hom nay' : 'Chua diem danh hom nay'; ?></span>
+                                            <span>Nhân vật: <?php echo htmlspecialchars($player_name); ?></span>
+                                            <span>Lượt quay: <?php echo number_format($remaining_spins, 0, ',', '.'); ?></span>
+                                            <span>TV chờ rút: <?php echo number_format($pending_gold, 0, ',', '.'); ?></span>
+                                            <span><?php echo $checked_in_today ? 'Đã điểm danh hôm nay' : 'Chưa điểm danh hôm nay'; ?></span>
                                         </div>
-                                        <p class="lucky-note">Moi ngay diem danh nhan 1 luot quay. Nap tien: 10.000 VND = 1 luot quay. Trung TV se vao kho cho rut; thoat game truoc khi rut TV.</p>
+                                        <p class="lucky-note">Mỗi ngày điểm danh nhận 1 lượt quay. Tích lũy 10.000 = 1 lượt quay. Trúng TV sẽ vào kho chờ rút; thoát game trước khi rút TV.</p>
 
                                         <?php if ($checkin_table_error !== ''): ?>
                                             <div class="message error"><?php echo htmlspecialchars($checkin_table_error); ?></div>
                                         <?php endif; ?>
 
-                                        <?php if ($message !== ''): ?>
+                                        <?php if (is_array($spin_result)): ?>
+                                            <?php
+                                                $result_type = ($spin_result['type'] ?? '') === 'win' ? 'win' : 'miss';
+                                                $result_label = (string)($spin_result['label'] ?? '');
+                                                $result_amount = (int)($spin_result['amount'] ?? 0);
+                                            ?>
+                                            <div class="spin-result-card <?php echo htmlspecialchars($result_type); ?>" id="spinResult">
+                                                <?php if ($result_type === 'win'): ?>
+                                                    <div class="result-eyebrow">Kết quả quay</div>
+                                                    <div class="result-title">Chúc mừng bạn đã trúng</div>
+                                                    <div class="result-prize"><?php echo htmlspecialchars($result_label); ?></div>
+                                                    <div class="result-desc">
+                                                        <?php echo number_format($result_amount, 0, ',', '.'); ?> TV đã được cộng vào kho chờ rút. Hãy thoát game trước khi rút vào túi đồ.
+                                                    </div>
+                                                    <div class="result-actions">
+                                                        <a class="result-link" href="#withdrawGold">Rút thỏi vàng</a>
+                                                        <a class="result-link secondary" href="/app/vong-quay.php">Quay tiếp</a>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <div class="result-eyebrow">Kết quả quay</div>
+                                                    <div class="result-title">Chúc bạn may mắn lần sau</div>
+                                                    <div class="result-prize"><?php echo htmlspecialchars($result_label ?: 'Chúc may mắn'); ?></div>
+                                                    <div class="result-desc">Lần này chưa trúng TV, bạn có thể điểm danh hoặc tích lũy nạp để nhận thêm lượt quay.</div>
+                                                    <div class="result-actions">
+                                                        <a class="result-link secondary" href="/app/vong-quay.php">Quay tiếp</a>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php elseif ($message !== ''): ?>
                                             <div class="message <?php echo htmlspecialchars($message_type); ?>">
                                                 <?php echo htmlspecialchars($message); ?>
                                             </div>
@@ -725,7 +860,7 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
                                                 <input type="hidden" name="action" value="daily_checkin">
                                                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                                 <button class="checkin-button" type="submit" <?php echo ($checked_in_today || !$checkin_table_ready) ? 'disabled' : ''; ?>>
-                                                    Diem danh
+                                                    Điểm danh
                                                 </button>
                                             </form>
 
@@ -739,13 +874,13 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
                                         </div>
 
                                         <?php if ($pending_gold > 0): ?>
-                                            <div class="withdraw-box">
-                                                <strong>Rut thoi vang vao tui do</strong>
+                                            <div class="withdraw-box" id="withdrawGold">
+                                                <strong>Rút thỏi vàng vào túi đồ</strong>
                                                 <form class="withdraw-form" method="post" action="/app/vong-quay.php">
                                                     <input type="hidden" name="action" value="withdraw_gold">
                                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                                     <input name="withdraw_amount" type="number" min="1" max="<?php echo $pending_gold; ?>" value="<?php echo $pending_gold; ?>" required>
-                                                    <button class="withdraw-button" type="submit">Rut</button>
+                                                    <button class="withdraw-button" type="submit">Rút</button>
                                                 </form>
                                             </div>
                                         <?php endif; ?>
@@ -764,9 +899,9 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
                                         </div>
 
                                         <div class="quick-links">
-                                            <a href="/forum.php">Ve dien dan</a>
-                                            <a href="/app/nap-ngoc.php">Nap tien</a>
-                                            <a href="/app/doi-vang.php">Doi thoi vang</a>
+                                            <a href="/forum.php">Về diễn đàn</a>
+                                            <a href="/app/nap-ngoc.php">Nạp tiền</a>
+                                            <a href="/app/doi-vang.php">Đổi thỏi vàng</a>
                                         </div>
                                     <?php endif; ?>
                                 </div>
@@ -787,6 +922,12 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
         (function () {
             var form = document.getElementById('luckySpinForm');
             var wheel = document.getElementById('luckyWheel');
+            var result = document.getElementById('spinResult');
+            if (result) {
+                window.setTimeout(function () {
+                    result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 120);
+            }
             if (!form || !wheel) {
                 return;
             }

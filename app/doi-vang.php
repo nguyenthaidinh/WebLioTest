@@ -363,7 +363,7 @@ if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] 
 
                                         <div class="quick-links">
                                             <a href="/app/nap-ngoc.php">Nap Tien</a>
-                                            <a href="/app/vong-quay.php">Vong Quay</a>
+                                            <a href="/app/vong-quay.php">Vòng Quay</a>
                                             <a href="/forum.php">Ve dien dan</a>
                                         </div>
                                     <?php endif; ?>

@@ -108,7 +108,7 @@ $conn->close();
                 <a href="/app/doi-vang.php">Đổi Thỏi Vàng</a> <br>
                 <a href="/app/doi-mat-khau.php">Đổi mật khẩu</a> <br>
                 <a href="/app/logout.php">Đăng xuất</a> <br>
-                <a href="/app/vong-quay.php">Vong Quay May Man</a> <br>
+                <a href="/app/vong-quay.php">Vòng Quay May Mắn</a> <br>
                 <?php if (!empty($is_admin_for_avatar)): ?>
                     <a href="/admin/">Admin</a> <br>
                 <?php endif; ?>
