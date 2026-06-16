@@ -427,18 +427,16 @@ $remaining_spins = (int)$account_state['luotquay'];
 $pending_gold = (int)$account_state['thoi_vang'];
 $checked_in_today = $is_logged_in && $checkin_table_ready ? lucky_has_checked_in_today($conn, $account_id) : false;
 
-$total_weight = array_sum(array_map(function ($reward) {
-    return (int)$reward['weight'];
-}, $lucky_rewards));
-
 $wheel_gradient_parts = [];
+$wheel_segment_count = max(1, count($lucky_rewards));
+$wheel_segment_degrees = 360 / $wheel_segment_count;
 $wheel_cursor = 0;
 foreach ($lucky_rewards as $reward) {
-    $slice = ((int)$reward['weight'] / $total_weight) * 360;
-    $wheel_gradient_parts[] = $reward['color'] . ' ' . $wheel_cursor . 'deg ' . ($wheel_cursor + $slice) . 'deg';
-    $wheel_cursor += $slice;
+    $wheel_gradient_parts[] = $reward['color'] . ' ' . round($wheel_cursor, 4) . 'deg ' . round($wheel_cursor + $wheel_segment_degrees, 4) . 'deg';
+    $wheel_cursor += $wheel_segment_degrees;
 }
 $wheel_gradient = implode(', ', $wheel_gradient_parts);
+$wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', ''), '0'), '.');
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -458,17 +456,19 @@ $wheel_gradient = implode(', ', $wheel_gradient_parts);
             color: #2d1600;
         }
         .lucky-panel {
-            background: #fff8ec;
+            background: linear-gradient(180deg, #fffaf0 0%, #fff3d8 100%);
             border: 1px solid #f6b35d;
-            border-radius: 8px;
-            padding: 14px;
+            border-radius: 10px;
+            padding: 16px;
             margin: 10px;
             text-align: center;
+            box-shadow: 0 10px 26px rgba(124, 45, 18, 0.18);
         }
         .lucky-panel h2 {
             color: #7c2d12;
-            font-size: 18px;
+            font-size: 20px;
             margin: 0 0 8px;
+            font-weight: 900;
         }
         .lucky-status {
             display: flex;
@@ -481,8 +481,9 @@ $wheel_gradient = implode(', ', $wheel_gradient_parts);
         .lucky-status span {
             background: #fff;
             border: 1px solid #f0c27b;
-            border-radius: 6px;
-            padding: 6px 9px;
+            border-radius: 999px;
+            padding: 7px 11px;
+            box-shadow: 0 2px 5px rgba(124, 45, 18, 0.08);
         }
         .lucky-note {
             margin: 0 0 10px;
@@ -499,52 +500,83 @@ $wheel_gradient = implode(', ', $wheel_gradient_parts);
         }
         .wheel-area {
             position: relative;
-            width: min(78vw, 320px);
+            width: min(82vw, 370px);
             aspect-ratio: 1;
-            margin: 12px auto;
+            margin: 14px auto 18px;
         }
         .wheel-pointer {
             position: absolute;
-            top: -8px;
+            top: -9px;
             left: 50%;
             transform: translateX(-50%);
             width: 0;
             height: 0;
-            border-left: 14px solid transparent;
-            border-right: 14px solid transparent;
-            border-top: 28px solid #b91c1c;
-            z-index: 2;
+            border-left: 17px solid transparent;
+            border-right: 17px solid transparent;
+            border-top: 35px solid #dc2626;
+            filter: drop-shadow(0 3px 2px rgba(0,0,0,0.28));
+            z-index: 5;
         }
         .wheel {
+            position: relative;
             width: 100%;
             height: 100%;
             border-radius: 50%;
-            background: conic-gradient(<?php echo htmlspecialchars($wheel_gradient); ?>);
-            border: 8px solid #7c2d12;
-            box-shadow: inset 0 0 0 4px rgba(255,255,255,0.6), 0 8px 18px rgba(124,45,18,0.25);
+            overflow: hidden;
+            background:
+                repeating-conic-gradient(from -90deg, rgba(255,255,255,0.75) 0deg 1.4deg, transparent 1.4deg <?php echo htmlspecialchars($wheel_segment_css); ?>deg),
+                conic-gradient(from -90deg, <?php echo htmlspecialchars($wheel_gradient); ?>);
+            border: 10px solid #7c2d12;
+            box-shadow:
+                inset 0 0 0 5px rgba(255,255,255,0.65),
+                inset 0 0 24px rgba(0,0,0,0.16),
+                0 12px 26px rgba(124,45,18,0.35);
             transition: transform 0.7s ease-out;
         }
         .wheel::after {
             content: "";
             position: absolute;
-            inset: 23%;
+            inset: 27%;
             border-radius: 50%;
-            background: #fff8ec;
-            border: 3px solid #f0c27b;
+            background: radial-gradient(circle, #fffdf4 0%, #fff4d8 100%);
+            border: 4px solid #facc15;
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.75);
+            z-index: 2;
+        }
+        .wheel-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 84px;
+            min-height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: translate(-50%, -50%) rotate(var(--angle)) translateY(-132px) rotate(90deg);
+            transform-origin: center;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 900;
+            line-height: 1.05;
+            text-align: center;
+            text-shadow: 0 2px 3px rgba(0,0,0,0.45);
+            z-index: 1;
+            pointer-events: none;
         }
         .wheel-center {
             position: absolute;
-            inset: 34%;
-            z-index: 1;
+            inset: 36%;
+            z-index: 3;
             border-radius: 50%;
-            background: #f97316;
+            background: linear-gradient(180deg, #fb923c 0%, #f97316 100%);
             color: #fff;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 900;
             text-transform: uppercase;
-            border: 3px solid #fff;
+            border: 4px solid #fff;
+            box-shadow: 0 5px 14px rgba(124,45,18,0.28);
         }
         .wheel.is-spinning {
             transform: rotate(1440deg);
@@ -619,25 +651,6 @@ $wheel_gradient = implode(', ', $wheel_gradient_parts);
             color: #991b1b;
             border: 1px solid #fca5a5;
         }
-        .reward-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
-            gap: 8px;
-            margin-top: 14px;
-            text-align: left;
-        }
-        .reward-row {
-            background: #fff;
-            border: 1px solid #f0c27b;
-            border-radius: 6px;
-            padding: 8px;
-            font-size: 12px;
-        }
-        .reward-row strong {
-            display: block;
-            color: #7c2d12;
-            margin-bottom: 3px;
-        }
         .quick-links {
             display: flex;
             justify-content: center;
@@ -651,6 +664,11 @@ $wheel_gradient = implode(', ', $wheel_gradient_parts);
             font-weight: 800;
         }
         @media (max-width: 420px) {
+            .wheel-label {
+                width: 68px;
+                font-size: 9px;
+                transform: translate(-50%, -50%) rotate(var(--angle)) translateY(-108px) rotate(90deg);
+            }
             .withdraw-form {
                 grid-template-columns: 1fr;
             }
@@ -734,17 +752,15 @@ $wheel_gradient = implode(', ', $wheel_gradient_parts);
 
                                         <div class="wheel-area">
                                             <div class="wheel-pointer"></div>
-                                            <div id="luckyWheel" class="wheel"></div>
+                                            <div id="luckyWheel" class="wheel">
+                                                <?php foreach ($lucky_rewards as $index => $reward): ?>
+                                                    <?php $label_angle = -90 + ($index * $wheel_segment_degrees) + ($wheel_segment_degrees / 2); ?>
+                                                    <span class="wheel-label" style="--angle: <?php echo round($label_angle, 4); ?>deg;">
+                                                        <?php echo htmlspecialchars($reward['label']); ?>
+                                                    </span>
+                                                <?php endforeach; ?>
+                                            </div>
                                             <div class="wheel-center">Quay</div>
-                                        </div>
-
-                                        <div class="reward-grid">
-                                            <?php foreach ($lucky_rewards as $reward): ?>
-                                                <div class="reward-row">
-                                                    <strong><?php echo htmlspecialchars($reward['label']); ?></strong>
-                                                    Ti le: <?php echo rtrim(rtrim(number_format(((int)$reward['weight'] / $total_weight) * 100, 2), '0'), '.'); ?>%
-                                                </div>
-                                            <?php endforeach; ?>
                                         </div>
 
                                         <div class="quick-links">
