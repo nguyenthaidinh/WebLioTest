@@ -155,6 +155,7 @@ $accounts = $conn->query("
         <div class="container">
             <a href="/admin"><i class="fas fa-arrow-left"></i> Ve menu admin</a>
             <a href="/admin/nap.php"><i class="fas fa-money-bill"></i> Duyet nap tien</a>
+            <a href="/admin/tyle-vongquay.php"><i class="fas fa-percentage"></i> Chinh ti le quay</a>
         </div>
     </div>
 

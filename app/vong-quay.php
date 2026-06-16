@@ -5,21 +5,22 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../forum_data.php';
 include_once __DIR__ . '/account_info.php';
+require_once __DIR__ . '/../lucky_rewards.php';
 
 const LUCKY_GOLD_ITEM_ID = 457;
 const CHECKIN_SPIN_REWARD = 1;
 
-$lucky_rewards = [
-    ['label' => 'Chúc may mắn', 'amount' => 0, 'weight' => 3000, 'color' => '#64748b'],
-    ['label' => '10 TV', 'amount' => 10, 'weight' => 3000, 'color' => '#22c55e'],
-    ['label' => '20 TV', 'amount' => 20, 'weight' => 2200, 'color' => '#14b8a6'],
-    ['label' => '50 TV', 'amount' => 50, 'weight' => 800, 'color' => '#3b82f6'],
-    ['label' => '100 TV', 'amount' => 100, 'weight' => 500, 'color' => '#a855f7'],
-    ['label' => '200 TV', 'amount' => 200, 'weight' => 250, 'color' => '#f97316'],
-    ['label' => '300 TV', 'amount' => 300, 'weight' => 150, 'color' => '#eab308'],
-    ['label' => '500 TV', 'amount' => 500, 'weight' => 75, 'color' => '#ef4444'],
-    ['label' => '1000 TV', 'amount' => 1000, 'weight' => 25, 'color' => '#f43f5e'],
-];
+$reward_config_error = '';
+try {
+    $lucky_rewards = lucky_rewards_load($conn);
+    if (lucky_rewards_total_weight($lucky_rewards) <= 0) {
+        throw new Exception('Tổng tỉ lệ vòng quay phải lớn hơn 0.');
+    }
+} catch (Exception $e) {
+    $reward_config_error = $e->getMessage();
+    error_log($reward_config_error);
+    $lucky_rewards = LUCKY_REWARD_DEFAULTS;
+}
 
 $message = $_SESSION['lucky_spin_message'] ?? '';
 $message_type = $_SESSION['lucky_spin_message_type'] ?? '';
@@ -636,7 +637,7 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
                 inset 0 0 0 5px rgba(255,255,255,0.65),
                 inset 0 0 24px rgba(0,0,0,0.16),
                 0 12px 26px rgba(124,45,18,0.35);
-            transition: transform 0.7s ease-out;
+            transition: transform 4.2s cubic-bezier(0.08, 0.72, 0.08, 1);
         }
         .wheel::after {
             content: "";
@@ -675,16 +676,38 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
             border-radius: 50%;
             background: linear-gradient(180deg, #fb923c 0%, #f97316 100%);
             color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: grid;
+            place-items: center;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
             font-weight: 900;
+            font-size: 15px;
+            line-height: 1;
+            text-align: center;
             text-transform: uppercase;
             border: 4px solid #fff;
             box-shadow: 0 5px 14px rgba(124,45,18,0.28);
+            cursor: pointer;
+            outline: 0;
+            transition: transform 0.18s ease, filter 0.18s ease, box-shadow 0.18s ease;
+        }
+        .wheel-center:hover {
+            filter: brightness(1.06);
+            transform: scale(1.03);
+            box-shadow: 0 7px 18px rgba(124,45,18,0.34);
+        }
+        .wheel-center:active {
+            transform: scale(0.98);
+        }
+        .wheel-center:disabled {
+            background: linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
+            cursor: not-allowed;
+            filter: none;
+            transform: none;
         }
         .wheel.is-spinning {
-            transform: rotate(1440deg);
+            transform: rotate(2880deg);
         }
         .spin-button,
         .checkin-button,
@@ -895,7 +918,7 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
                                                     </span>
                                                 <?php endforeach; ?>
                                             </div>
-                                            <div class="wheel-center">Quay</div>
+                                            <button id="wheelCenterSpin" class="wheel-center" type="button" <?php echo $remaining_spins <= 0 ? 'disabled' : ''; ?>>Quay</button>
                                         </div>
 
                                         <div class="quick-links">
@@ -922,6 +945,7 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
         (function () {
             var form = document.getElementById('luckySpinForm');
             var wheel = document.getElementById('luckyWheel');
+            var centerButton = document.getElementById('wheelCenterSpin');
             var result = document.getElementById('spinResult');
             if (result) {
                 window.setTimeout(function () {
@@ -930,6 +954,16 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
             }
             if (!form || !wheel) {
                 return;
+            }
+
+            if (centerButton) {
+                centerButton.addEventListener('click', function () {
+                    var submitButton = form.querySelector('button[type="submit"]');
+                    if (!submitButton || centerButton.disabled || submitButton.disabled) {
+                        return;
+                    }
+                    submitButton.click();
+                });
             }
 
             form.addEventListener('submit', function (event) {
@@ -942,12 +976,16 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
                 if (button) {
                     button.disabled = true;
                 }
+                if (centerButton) {
+                    centerButton.disabled = true;
+                    centerButton.textContent = 'Đang quay';
+                }
 
                 wheel.classList.add('is-spinning');
                 window.setTimeout(function () {
                     form.dataset.submitting = '1';
                     form.submit();
-                }, 720);
+                }, 4300);
             });
         })();
     </script>
