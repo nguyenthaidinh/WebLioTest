@@ -7,7 +7,8 @@ require_once __DIR__ . '/../forum_data.php';
 include_once __DIR__ . '/account_info.php';
 
 const GOLD_ITEM_ID = 457;
-const GOLD_EXCHANGE_RATE = 100;
+const GOLD_EXCHANGE_RATE = 50;
+const OLD_GOLD_EXCHANGE_RATE = 100;
 const RECHARGE_THANKS_GIFTCODE = 'camonquykhach';
 
 $message = $_SESSION['gold_exchange_message'] ?? '';
@@ -255,6 +256,17 @@ if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] 
             font-size: 12px;
             margin-bottom: 12px;
         }
+        .promo-rate-line {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 7px;
+            color: #92400e;
+            font-size: 13px;
+            font-weight: 900;
+            margin: 0 0 8px;
+            padding: 8px;
+            text-align: center;
+        }
         .giftcode-notice {
             background: #fff1c7;
             border: 1px solid #f59e0b;
@@ -370,8 +382,12 @@ if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] 
                                         <div class="balance-line">
                                             So du: <span><?php echo number_format((int)$user_balance, 0, ',', '.'); ?></span> VND
                                         </div>
+                                        <div class="promo-rate-line">
+                                            X2 n&#7841;p t&iacute;ch l&#361;y m&#7915;ng sinh nh&#7853;t Messi
+                                        </div>
                                         <div class="rate-line">
-                                            Ti le: 1 thoi vang = <?php echo number_format(GOLD_EXCHANGE_RATE, 0, ',', '.'); ?> VND. Thoat game truoc khi doi de tranh mat dong bo tui do.
+                                            T&#7881; l&#7879; m&#7899;i: <?php echo number_format(GOLD_EXCHANGE_RATE, 0, ',', '.'); ?> VND = 1 TV. Gi&aacute; c&#361;: <?php echo number_format(OLD_GOLD_EXCHANGE_RATE, 0, ',', '.'); ?> VND = 1 TV.<br>
+                                            Thoat game truoc khi doi de tranh mat dong bo tui do.
                                         </div>
                                         <?php if ((int)$user_total_recharge > 0): ?>
                                             <div class="giftcode-notice">
