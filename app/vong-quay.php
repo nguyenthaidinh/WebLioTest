@@ -146,6 +146,55 @@ function lucky_pick_reward($rewards) {
     return $rewards[0];
 }
 
+function lucky_find_reward_index($rewards, $spin_result) {
+    if (!is_array($spin_result)) {
+        return null;
+    }
+
+    $result_key = isset($spin_result['reward_key']) ? (string)$spin_result['reward_key'] : '';
+    if ($result_key !== '') {
+        foreach ($rewards as $index => $reward) {
+            if ((string)$reward['reward_key'] === $result_key) {
+                return $index;
+            }
+        }
+    }
+
+    $result_label = isset($spin_result['label']) ? (string)$spin_result['label'] : '';
+    $has_amount = array_key_exists('amount', $spin_result);
+    $result_amount = $has_amount ? (int)$spin_result['amount'] : null;
+
+    foreach ($rewards as $index => $reward) {
+        if (
+            $result_label !== ''
+            && (string)$reward['label'] === $result_label
+            && (!$has_amount || (int)$reward['amount'] === $result_amount)
+        ) {
+            return $index;
+        }
+    }
+
+    return null;
+}
+
+function lucky_wheel_rotation_for_index($index, $segment_degrees, $turns = 8) {
+    if ($index === null || $segment_degrees <= 0) {
+        return null;
+    }
+
+    $center_angle = -90 + ($index * $segment_degrees) + ($segment_degrees / 2);
+    $target_rotation = fmod(360 - fmod($center_angle, 360), 360);
+    if ($target_rotation < 0) {
+        $target_rotation += 360;
+    }
+
+    return ($turns * 360) + $target_rotation;
+}
+
+function lucky_format_degrees($degrees) {
+    return rtrim(rtrim(number_format((float)$degrees, 4, '.', ''), '0'), '.');
+}
+
 function lucky_get_account_state($conn, $account_id) {
     $state = ['luotquay' => 0, 'thoi_vang' => 0];
     if (!$account_id) {
@@ -412,13 +461,13 @@ if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 lucky_set_message(
                     'Chúc mừng! Bạn trúng ' . $reward['label'] . '.',
                     'success',
-                    ['type' => 'win', 'label' => $reward['label'], 'amount' => (int)$reward['amount']]
+                    ['type' => 'win', 'reward_key' => $reward['reward_key'], 'label' => $reward['label'], 'amount' => (int)$reward['amount']]
                 );
             } else {
                 lucky_set_message(
                     'Chúc may mắn lần sau.',
                     'warning',
-                    ['type' => 'miss', 'label' => $reward['label'], 'amount' => 0]
+                    ['type' => 'miss', 'reward_key' => $reward['reward_key'], 'label' => $reward['label'], 'amount' => 0]
                 );
             }
         } elseif ($action === 'withdraw_gold') {
@@ -450,6 +499,10 @@ foreach ($lucky_rewards as $reward) {
 }
 $wheel_gradient = implode(', ', $wheel_gradient_parts);
 $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', ''), '0'), '.');
+$wheel_result_index = lucky_find_reward_index($lucky_rewards, $spin_result);
+$wheel_settled_rotation = lucky_wheel_rotation_for_index($wheel_result_index, $wheel_segment_degrees);
+$wheel_settled_rotation_text = $wheel_settled_rotation !== null ? lucky_format_degrees($wheel_settled_rotation) : '';
+$wheel_class = 'wheel' . ($wheel_settled_rotation_text !== '' ? ' has-result' : '');
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -706,8 +759,11 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
             filter: none;
             transform: none;
         }
+        .wheel.has-result {
+            transform: rotate(var(--settled-rotation, 0deg));
+        }
         .wheel.is-spinning {
-            transform: rotate(2880deg);
+            transform: rotate(var(--spin-rotation, 2880deg));
         }
         .spin-button,
         .checkin-button,
@@ -910,7 +966,7 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
 
                                         <div class="wheel-area">
                                             <div class="wheel-pointer"></div>
-                                            <div id="luckyWheel" class="wheel">
+                                            <div id="luckyWheel" class="<?php echo htmlspecialchars($wheel_class); ?>"<?php if ($wheel_settled_rotation_text !== ''): ?> style="--settled-rotation: <?php echo htmlspecialchars($wheel_settled_rotation_text); ?>deg;" data-settled-rotation="<?php echo htmlspecialchars($wheel_settled_rotation_text); ?>"<?php endif; ?>>
                                                 <?php foreach ($lucky_rewards as $index => $reward): ?>
                                                     <?php $label_angle = -90 + ($index * $wheel_segment_degrees) + ($wheel_segment_degrees / 2); ?>
                                                     <span class="wheel-label" style="--angle: <?php echo round($label_angle, 4); ?>deg;">
@@ -981,6 +1037,11 @@ $wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', '
                     centerButton.textContent = 'Đang quay';
                 }
 
+                var settledRotation = parseFloat(wheel.getAttribute('data-settled-rotation') || '0');
+                if (isNaN(settledRotation)) {
+                    settledRotation = 0;
+                }
+                wheel.style.setProperty('--spin-rotation', (settledRotation + 2880) + 'deg');
                 wheel.classList.add('is-spinning');
                 window.setTimeout(function () {
                     form.dataset.submitting = '1';
