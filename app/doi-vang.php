@@ -8,6 +8,7 @@ include_once __DIR__ . '/account_info.php';
 
 const GOLD_ITEM_ID = 457;
 const GOLD_EXCHANGE_RATE = 100;
+const RECHARGE_THANKS_GIFTCODE = 'camonquykhach';
 
 $message = $_SESSION['gold_exchange_message'] ?? '';
 $message_type = $_SESSION['gold_exchange_message_type'] ?? '';
@@ -254,6 +255,28 @@ if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] 
             font-size: 12px;
             margin-bottom: 12px;
         }
+        .giftcode-notice {
+            background: #fff1c7;
+            border: 1px solid #f59e0b;
+            border-radius: 7px;
+            color: #713f12;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.5;
+            margin: 0 0 12px;
+            padding: 10px;
+            text-align: left;
+        }
+        .giftcode-notice .giftcode-value {
+            background: #7c2d12;
+            border-radius: 5px;
+            color: #fff7ed;
+            display: inline-block;
+            font-size: 13px;
+            letter-spacing: 0;
+            margin: 2px 0;
+            padding: 2px 7px;
+        }
         .exchange-form {
             display: grid;
             gap: 10px;
@@ -350,6 +373,12 @@ if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] 
                                         <div class="rate-line">
                                             Ti le: 1 thoi vang = <?php echo number_format(GOLD_EXCHANGE_RATE, 0, ',', '.'); ?> VND. Thoat game truoc khi doi de tranh mat dong bo tui do.
                                         </div>
+                                        <?php if ((int)$user_total_recharge > 0): ?>
+                                            <div class="giftcode-notice">
+                                                Giftcode tri &acirc;n: <span class="giftcode-value"><?php echo htmlspecialchars(RECHARGE_THANKS_GIFTCODE); ?></span><br>
+                                                Lượt nhập to&agrave;n server chỉ 5 lần, n&ecirc;n qu&yacute; kh&aacute;ch vui l&ograve;ng chỉ nhập 1 lần cho nick đ&atilde; nạp t&iacute;ch lũy. Mọi trường hợp gian lận sẽ bị xử phạt.
+                                            </div>
+                                        <?php endif; ?>
 
                                         <form class="exchange-form" method="post" action="/app/doi-vang.php">
                                             <input type="hidden" name="action" value="exchange_gold">

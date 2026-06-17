@@ -9,6 +9,7 @@ $is_logged_in = isset($_SESSION['username']);
 $account_username = $_SESSION['username'] ?? 'Khách';
 $account_id = null;
 $user_balance = 0;
+$user_total_recharge = 0;
 
 $player_name = "Chưa có nhân vật";
 $current_player_id = null;
@@ -60,14 +61,16 @@ if ($is_logged_in && isset($conn)) {
     $account_id = get_account_id_from_username($conn, $account_username);
 
     if ($account_id !== null) {
-        $stmt_balance = $conn->prepare("SELECT vnd FROM account WHERE id = ? LIMIT 1");
+        $stmt_balance = $conn->prepare("SELECT vnd, tongnap FROM account WHERE id = ? LIMIT 1");
         if ($stmt_balance) {
             $stmt_balance->bind_param("i", $account_id);
             $stmt_balance->execute();
             $result_balance = $stmt_balance->get_result();
             if ($balance_data = $result_balance->fetch_assoc()) {
                 $user_balance = $balance_data['vnd'];
+                $user_total_recharge = $balance_data['tongnap'];
                 $_SESSION['vnd'] = $user_balance;
+                $_SESSION['tongnap'] = $user_total_recharge;
             }
             $stmt_balance->close();
         } else {
