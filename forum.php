@@ -135,50 +135,47 @@ $conn->close();
                                 <div id="box_login_ads">
     <div id="columns" style="text-align:center">
         <figure>
-            <a href="https://xnxx.com" target="_blank"> <img height="35" src="/images/jar.png" alt="CHÚ BÉ RỒNG ONLINE"></a>
-            <br>
+            <a href="https://drive.google.com/drive/u/0/folders/1rcvGxxtDYhqyFgm91XHHIBzespPmzGA8" title="CHÚ BÉ RỒNG ONLINE" target="_blank" rel="noopener noreferrer">
+                <img height="35" src="/images/macos.png" alt="CHÚ BÉ RỒNG ONLINE">
             </a>
-            <figcaption>
-                <span style="color:rgb(209, 9, 50);">237</span> <a href="#" onclick="if (!window.__cfRLUnblockHandlers) return false; openWinjad()" title="CHÚ BÉ RỒNG ONLINE" target="_blank" data-cf-modified-6e49640f1ec245fe06a7b8fa-="">
-                </a>
+            <figcaption><span style="color:rgb(209, 9, 50);">MacOS</span>
                 <br> <br>
             </figcaption>
         </figure>
 
         <figure>
-            <a href="https://drive.google.com/file/d/1ofJkH001UW_d8szxhPD2B9aSJV8VbYTI/view?usp=sharing" title="CHÚ BÉ RỒNG ONLINE">
+            <a href="https://drive.google.com/drive/folders/1CdvJLR2HYk6C4b3U815eN5xElB4AypD8" title="CHÚ BÉ RỒNG ONLINE" target="_blank" rel="noopener noreferrer">
                 <img height="35" src="/images/android.png" alt="CHÚ BÉ RỒNG ONLINE">
             </a>
-            <figcaption><span style="color:rgb(209, 9, 50);">244</span>
-                <br>
-                <a href="/?c=huong-dan"></a>
-            </figcaption>
-        </figure>
-
-        <figure>
-            <a href="https://drive.google.com/file/d/1ofJkH001UW_d8szxhPD2B9aSJV8VbYTI/view?usp=sharing" title="CHÚ BÉ RỒNG ONLINE">
-                <img height="35" src="/images/play.png" alt="CHÚ BÉ RỒNG ONLINE">
-            </a>
-            <figcaption><span style="color:rgb(209, 9, 50);">244</span>
+            <figcaption><span style="color:rgb(209, 9, 50);">APK</span>
                 <br> <br>
             </figcaption>
         </figure>
 
         <figure>
-            <a href="https://drive.google.com/file/d/1oi_cuLSgN1QcOTREACKSn3effveoiNNU/view?usp=sharing" title="CHÚ BÉ RỒNG ONLINE">
+            <span title="Đang phát triển">
+                <img height="35" src="/images/play.png" alt="CHÚ BÉ RỒNG ONLINE">
+            </span>
+            <figcaption><span style="color:rgb(209, 9, 50);">Sắp ra mắt</span>
+                <br> <br>
+            </figcaption>
+        </figure>
+
+        <figure>
+            <a href="https://drive.google.com/drive/folders/1YgI0e39HlEzV9IVUSZgQcCw9_M-K8tfd" title="CHÚ BÉ RỒNG ONLINE" target="_blank" rel="noopener noreferrer">
                 <img height="35" src="/images/pc.png" alt="CHÚ BÉ RỒNG ONLINE">
             </a>
-            <figcaption><span style="color:rgb(209, 9, 50);">244</span>
+            <figcaption><span style="color:rgb(209, 9, 50);">PC</span>
                 <br> <br>
             </figcaption>
         </figure>
 
         <figure>
-            <a href="https://drive.google.com/file/d/1okys2XJ9bDTsrG7msPk54Xdi23DECmCp/view?usp=sharing" title="CHÚ BÉ RỒNG ONLINE">
+            <a href="https://drive.google.com/drive/u/0/folders/1gajpRFf_RCJlgQo7J8GBPZ78R2Yfo7oj" title="CHÚ BÉ RỒNG ONLINE" target="_blank" rel="noopener noreferrer">
                 <img style="margin-bottom:0px" height="35" src="/images/ip.png" alt="CHÚ BÉ RỒNG ONLINE">
             </a>
-            <figcaption>
-                <a href="<?php /* TestFlight */ ?>">Testflight 1</a> <br> <br>
+            <figcaption><span style="color:rgb(209, 9, 50);">iOS</span>
+                <br> <br>
             </figcaption>
         </figure>
 

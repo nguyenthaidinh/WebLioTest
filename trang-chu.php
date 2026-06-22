@@ -454,12 +454,12 @@
                         </script>
 
                         <div class="download-grid">
-                            <!-- JAVA CARD -->
-                            <div class="download-card disabled-card">
-                                <img src="/images/jar.png" alt="Java version">
-                                <div class="version">Java (JAR/JAD)</div>
-                                <span class="download-btn disabled-btn">Đang phát triển</span>
-                                <div class="extra-links">🚧 Sắp ra mắt</div>
+                            <!-- MACOS CARD -->
+                            <div class="download-card">
+                                <img src="/images/macos.png" alt="MacOS version">
+                                <div class="version">MacOS</div>
+                                <a href="https://drive.google.com/drive/u/0/folders/1rcvGxxtDYhqyFgm91XHHIBzespPmzGA8" class="download-btn" target="_blank">Tải MacOS</a>
+                                <div class="extra-links">Cho MacOS</div>
                             </div>
 
                             <!-- ANDROID APK CARD -->
@@ -487,11 +487,11 @@
                             </div>
 
                             <!-- IPHONE APP CARD -->
-                            <div class="download-card disabled-card">
+                            <div class="download-card">
                                 <img src="/images/ip.png" alt="iPhone/iPad">
                                 <div class="version">iPhone / iPad</div>
-                                <span class="download-btn disabled-btn">Đang phát triển</span>
-                                <div class="extra-links">🚧 Sắp ra mắt</div>
+                                <a href="https://drive.google.com/drive/u/0/folders/1gajpRFf_RCJlgQo7J8GBPZ78R2Yfo7oj" class="download-btn" target="_blank">Tải iOS</a>
+                                <div class="extra-links">Cho iPhone / iPad</div>
                             </div>
 
                         </div>
