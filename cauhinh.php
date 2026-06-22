@@ -3,7 +3,7 @@ $_domain = 'http://nro.liodev.io.vn'; // điền domain của sự kiện giới
 $_IP = '180.93.54.5'; // IP hiển thị ở phần cuối trang
 
 // MySQL
-$db_host = "180.93.54.5";
+$db_host = "127.0.0.1";
 $db_user = "liodev";
 $db_pass = "liopass";
 $db_name = "team2026";

@@ -12,7 +12,7 @@ if (isset($_SESSION['user_id'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
 }
-$host = '180.93.54.5';
+$host = '127.0.0.1';
 $dbname = 'team2026';
 $user = 'liodev';
 $pass = 'liopass';
