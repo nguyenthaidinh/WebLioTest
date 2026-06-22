@@ -30,70 +30,89 @@ $total_players = admin_count_query($conn, "SELECT COUNT(*) FROM player");
 $pending_recharges = admin_count_query($conn, "SELECT COUNT(*) FROM bank_transfers WHERE status = 'pending' AND is_credited = 0");
 $today_trades = admin_count_query($conn, "SELECT COUNT(*) FROM history_transaction WHERE time_tran >= CURDATE() AND time_tran < DATE_ADD(CURDATE(), INTERVAL 1 DAY)");
 
-$menu_items = [
+$admin_name = $_username ?? 'admin';
+$quick_items = [
     [
-        'title' => 'Buff vat pham',
-        'desc' => 'Them vat pham vao hanh trang nguoi choi.',
-        'href' => '/admin/vatpham.php',
-        'icon' => 'fas fa-box-open',
-        'tag' => 'Item',
-    ],
-    [
-        'title' => 'Cong chi so',
-        'desc' => 'Chinh suc manh, tiem nang, HP, KI va sat thuong.',
-        'href' => '/admin/chiso.php',
-        'icon' => 'fas fa-bolt',
-        'tag' => 'Nhan vat',
-    ],
-    [
-        'title' => 'Cong tien',
-        'desc' => 'Duyet va xu ly yeu cau nap tien.',
+        'title' => 'Duyet nap',
+        'desc' => 'Xu ly cac giao dich nap tien dang cho.',
         'href' => '/admin/nap.php',
-        'icon' => 'fas fa-coins',
-        'tag' => $pending_recharges . ' cho duyet',
+        'icon' => 'fas fa-wallet',
+        'meta' => $pending_recharges . ' cho duyet',
+        'priority' => true,
     ],
     [
         'title' => 'LSGD game',
         'desc' => 'Xem lich su giao dich doi do trong game.',
         'href' => '/admin/lsgd.php',
-        'icon' => 'fas fa-exchange-alt',
-        'tag' => 'Game',
+        'icon' => 'fas fa-history',
+        'meta' => $today_trades . ' hom nay',
+        'priority' => false,
+    ],
+    [
+        'title' => 'Nguoi dung',
+        'desc' => 'Tra cuu tai khoan, so du va trang thai user.',
+        'href' => '/admin/users.php',
+        'icon' => 'fas fa-users',
+        'meta' => number_format($total_accounts) . ' tai khoan',
+        'priority' => false,
+    ],
+    [
+        'title' => 'Nhan vat',
+        'desc' => 'Xem va sua thong tin nhan vat.',
+        'href' => '/admin/players.php',
+        'icon' => 'fas fa-user',
+        'meta' => number_format($total_players) . ' nhan vat',
+        'priority' => false,
+    ],
+    [
+        'title' => 'Buff vat pham',
+        'desc' => 'Them vat pham vao hanh trang nguoi choi.',
+        'href' => '/admin/vatpham.php',
+        'icon' => 'fas fa-box',
+        'meta' => 'Item',
+        'priority' => false,
+    ],
+    [
+        'title' => 'Cong chi so',
+        'desc' => 'Chinh suc manh, tiem nang, HP, KI.',
+        'href' => '/admin/chiso.php',
+        'icon' => 'fas fa-chart-line',
+        'meta' => 'Chi so',
+        'priority' => false,
     ],
     [
         'title' => 'Luot quay',
         'desc' => 'Quan ly luot quay va qua vong quay.',
         'href' => '/admin/luotquay.php',
         'icon' => 'fas fa-sync-alt',
-        'tag' => 'Vong quay',
+        'meta' => 'Vong quay',
+        'priority' => false,
     ],
     [
         'title' => 'Ti le quay',
         'desc' => 'Cau hinh ti le phan thuong vong quay.',
         'href' => '/admin/tyle-vongquay.php',
         'icon' => 'fas fa-sliders-h',
-        'tag' => 'Cau hinh',
+        'meta' => 'Cau hinh',
+        'priority' => false,
     ],
     [
         'title' => 'Gift code',
         'desc' => 'Tao va quan ly giftcode cho nguoi choi.',
         'href' => '/admin/giftcode.php',
         'icon' => 'fas fa-gift',
-        'tag' => 'Code',
+        'meta' => 'Code',
+        'priority' => false,
     ],
-    [
-        'title' => 'Nguoi dung',
-        'desc' => 'Tra cuu tai khoan, so du va trang thai user.',
-        'href' => '/admin/users.php',
-        'icon' => 'fas fa-users-cog',
-        'tag' => number_format($total_accounts) . ' TK',
-    ],
-    [
-        'title' => 'Nhan vat',
-        'desc' => 'Xem va sua thong tin nhan vat trong game.',
-        'href' => '/admin/players.php',
-        'icon' => 'fas fa-user-astronaut',
-        'tag' => number_format($total_players) . ' player',
-    ],
+];
+
+$sidebar_items = [
+    ['label' => 'Dien dan', 'href' => '/forum.php', 'icon' => 'fas fa-comments'],
+    ['label' => 'Duyet nap', 'href' => '/admin/nap.php', 'icon' => 'fas fa-wallet'],
+    ['label' => 'LSGD game', 'href' => '/admin/lsgd.php', 'icon' => 'fas fa-history'],
+    ['label' => 'Nguoi dung', 'href' => '/admin/users.php', 'icon' => 'fas fa-users'],
+    ['label' => 'Nhan vat', 'href' => '/admin/players.php', 'icon' => 'fas fa-user'],
+    ['label' => 'Dang xuat', 'href' => '/admin?out=1', 'icon' => 'fas fa-sign-out-alt'],
 ];
 ?>
 <!DOCTYPE html>
@@ -111,386 +130,456 @@ $menu_items = [
     <link rel="icon" href="../image/icon.png?v=99">
     <link href="../assets/main.css" rel="stylesheet">
     <style>
+        :root {
+            --bg: #eef2f7;
+            --surface: #ffffff;
+            --surface-2: #f8fafc;
+            --text: #111827;
+            --muted: #64748b;
+            --line: #e2e8f0;
+            --nav: #101827;
+            --nav-2: #162033;
+            --accent: #f59e0b;
+            --accent-dark: #b45309;
+            --success: #16a34a;
+            --danger: #dc2626;
+        }
+        * { box-sizing: border-box; }
         body {
-            background:
-                radial-gradient(circle at top left, rgba(249,115,22,0.20), transparent 32%),
-                radial-gradient(circle at top right, rgba(254,187,18,0.12), transparent 28%),
-                #17172b;
-            color: #e5e7eb;
+            background: var(--bg);
+            color: var(--text);
             font-family: 'Segoe UI', Verdana, sans-serif;
+            font-size: 14px;
+            margin: 0;
             min-height: 100vh;
         }
-        .admin-topbar {
-            background: rgba(15,15,40,0.78);
-            border-bottom: 1px solid rgba(249,115,22,0.25);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.22);
-            padding: 12px 0;
+        a { text-decoration: none; }
+        .admin-layout {
+            display: grid;
+            grid-template-columns: 264px minmax(0, 1fr);
+            min-height: 100vh;
+        }
+        .sidebar {
+            background: var(--nav);
+            color: #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            padding: 18px;
             position: sticky;
             top: 0;
-            z-index: 10;
-        }
-        .admin-topbar .topbar-inner {
-            align-items: center;
-            display: flex;
-            gap: 12px;
-            justify-content: space-between;
+            height: 100vh;
         }
         .brand {
             align-items: center;
-            color: #febb12;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
             display: flex;
-            font-size: 15px;
+            gap: 12px;
+            padding: 4px 2px 18px;
+        }
+        .brand-mark {
+            align-items: center;
+            background: linear-gradient(135deg, #f59e0b, #fbbf24);
+            border-radius: 8px;
+            color: #111827;
+            display: inline-flex;
+            font-size: 18px;
             font-weight: 900;
+            height: 42px;
+            justify-content: center;
+            width: 42px;
+        }
+        .brand-title {
+            color: #fff;
+            font-size: 16px;
+            font-weight: 900;
+            line-height: 1.1;
+        }
+        .brand-sub {
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 700;
+            margin-top: 3px;
+            text-transform: uppercase;
+        }
+        .nav-label {
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: .7px;
+            margin: 22px 0 8px;
+            text-transform: uppercase;
+        }
+        .nav-list {
+            display: grid;
+            gap: 6px;
+        }
+        .nav-link {
+            align-items: center;
+            border-radius: 8px;
+            color: #cbd5e1;
+            display: flex;
+            font-size: 13px;
+            font-weight: 800;
             gap: 10px;
-            letter-spacing: .2px;
+            padding: 10px 12px;
+        }
+        .nav-link i {
+            color: #94a3b8;
+            width: 18px;
+        }
+        .nav-link:hover,
+        .nav-link.active {
+            background: var(--nav-2);
+            color: #fff;
             text-decoration: none;
         }
-        .brand:hover { color: #ffe08a; text-decoration: none; }
-        .brand img { height: 34px; width: auto; }
-        .topbar-actions {
+        .nav-link:hover i,
+        .nav-link.active i { color: var(--accent); }
+        .sidebar-footer {
+            border-top: 1px solid rgba(255,255,255,0.08);
+            color: #94a3b8;
+            font-size: 12px;
+            line-height: 1.6;
+            margin-top: auto;
+            padding-top: 14px;
+            word-break: break-word;
+        }
+        .main {
+            min-width: 0;
+            padding: 24px 28px 34px;
+        }
+        .topbar {
             align-items: center;
             display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: flex-end;
+            gap: 16px;
+            justify-content: space-between;
+            margin-bottom: 22px;
         }
-        .topbar-pill {
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 999px;
-            color: #dbe4f0;
-            font-size: 12px;
-            font-weight: 800;
-            padding: 7px 12px;
-            text-decoration: none;
-        }
-        .topbar-pill:hover { background: rgba(249,115,22,0.18); color: #fff; text-decoration: none; }
-        .admin-shell {
-            margin: 0 auto;
-            max-width: 1180px;
-            padding: 28px 15px 34px;
-        }
-        .hero-panel {
-            background: linear-gradient(135deg, rgba(30,30,60,0.92), rgba(22,22,48,0.92));
-            border: 1px solid rgba(249,115,22,0.22);
-            border-radius: 16px;
-            box-shadow: 0 18px 50px rgba(0,0,0,0.32);
-            display: grid;
-            gap: 18px;
-            grid-template-columns: 1.2fr .8fr;
-            overflow: hidden;
-            padding: 24px;
-            position: relative;
-        }
-        .hero-panel:before {
-            background: linear-gradient(135deg, rgba(249,115,22,0.18), rgba(254,187,18,0.08));
-            border-radius: 999px;
-            content: "";
-            height: 220px;
-            position: absolute;
-            right: -80px;
-            top: -110px;
-            width: 220px;
-        }
-        .hero-kicker {
-            color: #febb12;
+        .eyebrow {
+            color: var(--accent-dark);
             font-size: 12px;
             font-weight: 900;
-            letter-spacing: .9px;
+            letter-spacing: .5px;
             text-transform: uppercase;
         }
-        .hero-title {
-            color: #fff;
-            font-size: 32px;
+        .page-title {
+            color: var(--text);
+            font-size: 28px;
             font-weight: 900;
-            margin: 8px 0;
+            margin: 4px 0;
         }
-        .hero-subtitle {
-            color: #aab2c8;
+        .page-desc {
+            color: var(--muted);
             font-size: 14px;
-            line-height: 1.7;
             margin: 0;
-            max-width: 620px;
         }
-        .hero-meta {
-            align-content: start;
-            display: grid;
+        .user-chip {
+            align-items: center;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            display: flex;
             gap: 10px;
-            position: relative;
-            z-index: 1;
+            padding: 8px 12px;
+            white-space: nowrap;
         }
-        .meta-card {
-            background: rgba(15,15,40,0.68);
-            border: 1px solid rgba(249,115,22,0.16);
-            border-radius: 12px;
-            padding: 12px 14px;
+        .user-dot {
+            background: var(--success);
+            border-radius: 50%;
+            height: 9px;
+            width: 9px;
         }
-        .meta-label {
-            color: #8f9bb5;
-            font-size: 10px;
-            font-weight: 900;
-            letter-spacing: .6px;
-            text-transform: uppercase;
-        }
-        .meta-value {
-            color: #febb12;
+        .user-name {
+            color: var(--text);
             font-size: 13px;
             font-weight: 900;
-            margin-top: 3px;
-            word-break: break-word;
         }
         .stats-grid {
             display: grid;
             gap: 12px;
             grid-template-columns: repeat(4, minmax(0, 1fr));
-            margin: 18px 0;
+            margin-bottom: 22px;
         }
         .stat-card {
-            background: rgba(30,30,60,0.76);
-            border: 1px solid rgba(249,115,22,0.16);
-            border-radius: 12px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 8px;
             padding: 16px;
+        }
+        .stat-top {
+            align-items: center;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
         }
         .stat-icon {
             align-items: center;
-            background: linear-gradient(135deg, #f97316, #febb12);
-            border-radius: 10px;
-            color: #111827;
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            border-radius: 8px;
+            color: var(--accent-dark);
             display: inline-flex;
             height: 34px;
             justify-content: center;
-            margin-bottom: 10px;
             width: 34px;
         }
-        .stat-number {
-            color: #fff;
-            font-size: 24px;
-            font-weight: 900;
-            line-height: 1.1;
-        }
-        .stat-label {
-            color: #9ca3af;
+        .stat-note {
+            color: var(--muted);
             font-size: 11px;
             font-weight: 800;
-            margin-top: 5px;
+        }
+        .stat-number {
+            color: var(--text);
+            font-size: 28px;
+            font-weight: 900;
+            line-height: 1;
+        }
+        .stat-label {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 800;
+            margin-top: 7px;
             text-transform: uppercase;
         }
-        .section-title {
+        .toolbar {
             align-items: center;
-            color: #fff;
             display: flex;
+            justify-content: space-between;
+            margin: 6px 0 12px;
+        }
+        .section-title {
+            color: var(--text);
             font-size: 18px;
             font-weight: 900;
-            gap: 8px;
-            margin: 18px 0 12px;
+            margin: 0;
         }
-        .section-title i { color: #febb12; }
-        .menu-grid {
+        .toolbar-hint {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .actions-grid {
             display: grid;
-            gap: 14px;
+            gap: 12px;
             grid-template-columns: repeat(3, minmax(0, 1fr));
         }
-        .admin-card {
-            background: rgba(30,30,60,0.78);
-            border: 1px solid rgba(249,115,22,0.16);
-            border-radius: 12px;
-            color: #dbe4f0;
-            display: block;
-            min-height: 154px;
-            overflow: hidden;
-            padding: 18px;
-            position: relative;
-            text-decoration: none;
-            transition: transform .18s ease, border-color .18s ease, background .18s ease;
-        }
-        .admin-card:hover {
-            background: rgba(38,38,72,0.90);
-            border-color: rgba(249,115,22,0.48);
-            color: #fff;
-            text-decoration: none;
-            transform: translateY(-2px);
-        }
-        .admin-card:after {
-            background: rgba(249,115,22,0.12);
-            border-radius: 999px;
-            content: "";
-            height: 95px;
-            position: absolute;
-            right: -45px;
-            top: -45px;
-            width: 95px;
-        }
-        .card-head {
-            align-items: center;
-            display: flex;
+        .action-card {
+            align-items: flex-start;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            color: var(--text);
+            display: grid;
             gap: 12px;
-            position: relative;
-            z-index: 1;
+            grid-template-columns: 42px minmax(0, 1fr) auto;
+            min-height: 110px;
+            padding: 16px;
+            transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
         }
-        .card-icon {
+        .action-card:hover {
+            border-color: #f59e0b;
+            box-shadow: 0 12px 28px rgba(15,23,42,0.10);
+            color: var(--text);
+            text-decoration: none;
+            transform: translateY(-1px);
+        }
+        .action-card.priority {
+            border-color: #f59e0b;
+            box-shadow: inset 3px 0 0 #f59e0b;
+        }
+        .action-icon {
             align-items: center;
-            background: rgba(249,115,22,0.14);
-            border: 1px solid rgba(249,115,22,0.22);
-            border-radius: 12px;
-            color: #febb12;
+            background: var(--surface-2);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            color: var(--accent-dark);
             display: inline-flex;
-            flex: 0 0 42px;
             height: 42px;
             justify-content: center;
             width: 42px;
         }
-        .card-title {
-            color: #fff;
+        .action-title {
+            color: var(--text);
             font-size: 15px;
             font-weight: 900;
-            margin: 0;
-            text-transform: uppercase;
+            margin: 0 0 5px;
         }
-        .card-desc {
-            color: #aab2c8;
+        .action-desc {
+            color: var(--muted);
             font-size: 13px;
-            line-height: 1.55;
-            margin: 14px 0 0;
-            min-height: 40px;
-            position: relative;
-            z-index: 1;
+            line-height: 1.45;
+            margin: 0;
         }
-        .card-foot {
-            align-items: center;
-            display: flex;
-            justify-content: space-between;
-            margin-top: 14px;
-            position: relative;
-            z-index: 1;
-        }
-        .card-tag {
-            background: rgba(254,187,18,0.13);
-            border: 1px solid rgba(254,187,18,0.20);
+        .action-meta {
+            background: #f8fafc;
+            border: 1px solid var(--line);
             border-radius: 999px;
-            color: #febb12;
-            font-size: 10px;
+            color: #475569;
+            font-size: 11px;
             font-weight: 900;
-            padding: 4px 8px;
-            text-transform: uppercase;
-        }
-        .card-open {
-            color: #febb12;
-            font-size: 12px;
-            font-weight: 900;
+            padding: 5px 9px;
+            white-space: nowrap;
         }
         .admin-footer {
-            border-top: 1px solid rgba(249,115,22,0.12);
-            color: #8f9bb5;
+            color: var(--muted);
             font-size: 12px;
-            margin-top: 24px;
-            padding-top: 18px;
-            text-align: center;
+            margin-top: 22px;
+            text-align: right;
         }
         .lio-badge {
-            background: linear-gradient(135deg,#f97316,#febb12);
+            background: #111827;
             border-radius: 5px;
-            color: #111827;
+            color: #fbbf24;
             display: inline-block;
             font-size: 10px;
             font-weight: 900;
-            margin-top: 8px;
-            padding: 3px 10px;
+            margin-left: 8px;
+            padding: 3px 8px;
             text-transform: uppercase;
         }
-        @media (max-width: 991px) {
-            .hero-panel { grid-template-columns: 1fr; }
+        @media (max-width: 1180px) {
+            .admin-layout { grid-template-columns: 226px minmax(0, 1fr); }
+            .actions-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
-        @media (max-width: 575px) {
-            .admin-topbar .topbar-inner { align-items: flex-start; flex-direction: column; }
-            .topbar-actions { justify-content: flex-start; }
-            .hero-panel { padding: 18px; }
-            .hero-title { font-size: 25px; }
-            .stats-grid, .menu-grid { grid-template-columns: 1fr; }
+        @media (max-width: 820px) {
+            .admin-layout { display: block; }
+            .sidebar {
+                height: auto;
+                position: relative;
+            }
+            .nav-list {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .sidebar-footer { display: none; }
+            .main { padding: 20px 15px 28px; }
+            .topbar {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            .user-chip { width: 100%; }
+        }
+        @media (max-width: 560px) {
+            .nav-list,
+            .stats-grid,
+            .actions-grid {
+                grid-template-columns: 1fr;
+            }
+            .action-card {
+                grid-template-columns: 40px minmax(0, 1fr);
+            }
+            .action-meta {
+                grid-column: 2;
+                justify-self: start;
+            }
+            .toolbar {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 4px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="admin-topbar">
-        <div class="container topbar-inner">
-            <a class="brand" href="/admin">
-                <img src="../image/logo.png" alt="Lio">
-                <span>Admin Lio</span>
-            </a>
-            <div class="topbar-actions">
-                <a class="topbar-pill" href="/forum.php"><i class="fas fa-comments"></i> Quay lai dien dan</a>
-                <a class="topbar-pill" href="/admin?out=1"><i class="fas fa-sign-out-alt"></i> Dang xuat</a>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-mark">L</div>
+                <div>
+                    <div class="brand-title">Lio Admin</div>
+                    <div class="brand-sub">Quan tri server</div>
+                </div>
             </div>
-        </div>
+
+            <div class="nav-label">Menu nhanh</div>
+            <nav class="nav-list">
+                <a class="nav-link active" href="/admin"><i class="fas fa-home"></i> Tong quan</a>
+                <?php foreach ($sidebar_items as $item) : ?>
+                    <a class="nav-link" href="<?php echo admin_h($item['href']); ?>">
+                        <i class="<?php echo admin_h($item['icon']); ?>"></i>
+                        <?php echo admin_h($item['label']); ?>
+                    </a>
+                <?php endforeach; ?>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div><strong>Admin:</strong> <?php echo admin_h($admin_name); ?></div>
+                <div><strong>IP:</strong> <?php echo admin_h($_IP); ?></div>
+            </div>
+        </aside>
+
+        <main class="main">
+            <header class="topbar">
+                <div>
+                    <div class="eyebrow">Bang dieu khien</div>
+                    <h1 class="page-title">Tong quan admin</h1>
+                    <p class="page-desc">Quan ly server nhanh, ro rang va de bam hon.</p>
+                </div>
+                <div class="user-chip">
+                    <span class="user-dot"></span>
+                    <span class="user-name"><?php echo admin_h($admin_name); ?></span>
+                </div>
+            </header>
+
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-top">
+                        <div class="stat-icon"><i class="fas fa-users"></i></div>
+                        <div class="stat-note">Tong</div>
+                    </div>
+                    <div class="stat-number"><?php echo number_format($total_accounts); ?></div>
+                    <div class="stat-label">Tai khoan</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-top">
+                        <div class="stat-icon"><i class="fas fa-user"></i></div>
+                        <div class="stat-note">Game</div>
+                    </div>
+                    <div class="stat-number"><?php echo number_format($total_players); ?></div>
+                    <div class="stat-label">Nhan vat</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-top">
+                        <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+                        <div class="stat-note">Can xu ly</div>
+                    </div>
+                    <div class="stat-number"><?php echo number_format($pending_recharges); ?></div>
+                    <div class="stat-label">Nap cho duyet</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-top">
+                        <div class="stat-icon"><i class="fas fa-exchange-alt"></i></div>
+                        <div class="stat-note">Hom nay</div>
+                    </div>
+                    <div class="stat-number"><?php echo number_format($today_trades); ?></div>
+                    <div class="stat-label">GD game</div>
+                </div>
+            </section>
+
+            <div class="toolbar">
+                <h2 class="section-title">Chuc nang quan tri</h2>
+                <div class="toolbar-hint">Bam vao tung muc de mo trang xu ly</div>
+            </div>
+
+            <section class="actions-grid">
+                <?php foreach ($quick_items as $item) : ?>
+                    <a class="action-card <?php echo !empty($item['priority']) ? 'priority' : ''; ?>" href="<?php echo admin_h($item['href']); ?>">
+                        <div class="action-icon"><i class="<?php echo admin_h($item['icon']); ?>"></i></div>
+                        <div>
+                            <h3 class="action-title"><?php echo admin_h($item['title']); ?></h3>
+                            <p class="action-desc"><?php echo admin_h($item['desc']); ?></p>
+                        </div>
+                        <div class="action-meta"><?php echo admin_h($item['meta']); ?></div>
+                    </a>
+                <?php endforeach; ?>
+            </section>
+
+            <footer class="admin-footer">
+                IP: <?php echo admin_h($_IP); ?>
+                <span class="lio-badge">Code by Lio</span>
+            </footer>
+        </main>
     </div>
-
-    <main class="admin-shell">
-        <section class="hero-panel">
-            <div>
-                <div class="hero-kicker">Bang dieu khien</div>
-                <h1 class="hero-title">Menu admin</h1>
-                <p class="hero-subtitle">
-                    Quan ly tai khoan, nhan vat, nap tien, giftcode va lich su giao dich game trong mot man hinh gon gang hon.
-                </p>
-            </div>
-            <div class="hero-meta">
-                <div class="meta-card">
-                    <div class="meta-label">Admin dang nhap</div>
-                    <div class="meta-value"><?php echo admin_h($_username ?? 'admin'); ?></div>
-                </div>
-                <div class="meta-card">
-                    <div class="meta-label">IP hien tai</div>
-                    <div class="meta-value"><?php echo admin_h($_IP); ?></div>
-                </div>
-            </div>
-        </section>
-
-        <section class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-users"></i></div>
-                <div class="stat-number"><?php echo number_format($total_accounts); ?></div>
-                <div class="stat-label">Tai khoan</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-gamepad"></i></div>
-                <div class="stat-number"><?php echo number_format($total_players); ?></div>
-                <div class="stat-label">Nhan vat</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-wallet"></i></div>
-                <div class="stat-number"><?php echo number_format($pending_recharges); ?></div>
-                <div class="stat-label">Nap cho duyet</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-random"></i></div>
-                <div class="stat-number"><?php echo number_format($today_trades); ?></div>
-                <div class="stat-label">GD game hom nay</div>
-            </div>
-        </section>
-
-        <div class="section-title"><i class="fas fa-th-large"></i> Chuc nang nhanh</div>
-        <section class="menu-grid">
-            <?php foreach ($menu_items as $item) : ?>
-                <a class="admin-card" href="<?php echo admin_h($item['href']); ?>">
-                    <div class="card-head">
-                        <div class="card-icon"><i class="<?php echo admin_h($item['icon']); ?>"></i></div>
-                        <h2 class="card-title"><?php echo admin_h($item['title']); ?></h2>
-                    </div>
-                    <p class="card-desc"><?php echo admin_h($item['desc']); ?></p>
-                    <div class="card-foot">
-                        <span class="card-tag"><?php echo admin_h($item['tag']); ?></span>
-                        <span class="card-open">Mo <i class="fas fa-arrow-right"></i></span>
-                    </div>
-                </a>
-            <?php endforeach; ?>
-        </section>
-
-        <footer class="admin-footer">
-            <div>IP: <?php echo admin_h($_IP); ?></div>
-            <div class="lio-badge">Code by Lio</div>
-        </footer>
-    </main>
 
     <script src="../assets/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="../assets/main.js"></script>
