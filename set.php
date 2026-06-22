@@ -44,12 +44,12 @@ if ($_username_session !== null && $_user_id_session !== null) {
 
             if ($user_arr) {
                 $_is_logged_in = true;
-                $_username = htmlspecialchars($user_arr['username']);
-                $_password = htmlspecialchars($user_arr['password']);
-                $_gioithieu = htmlspecialchars($user_arr['gioithieu']);
-                $_admin = htmlspecialchars($user_arr['admin']);
+                $_username = htmlspecialchars((string)($user_arr['username'] ?? ''), ENT_QUOTES, 'UTF-8');
+                $_password = htmlspecialchars((string)($user_arr['password'] ?? ''), ENT_QUOTES, 'UTF-8');
+                $_gioithieu = htmlspecialchars((string)($user_arr['gioithieu'] ?? ''), ENT_QUOTES, 'UTF-8');
+                $_admin = htmlspecialchars((string)($user_arr['admin'] ?? 0), ENT_QUOTES, 'UTF-8');
                 $_coin = $user_arr['vnd'];
-                $_tcoin = htmlspecialchars($user_arr['tongnap']);
+                $_tcoin = htmlspecialchars((string)($user_arr['tongnap'] ?? 0), ENT_QUOTES, 'UTF-8');
                 $_status = $user_arr['active'];
                 switch ($_status) {
                     case '1':
