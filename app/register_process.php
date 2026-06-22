@@ -9,10 +9,10 @@ if (isset($_SESSION['user_id'])) {
     exit();
 }
 header('Content-Type: application/json');
-$host = '127.0.0.1';
+$host = '180.93.54.5';
 $dbname = 'team2026';
-$user = 'nro';
-$pass = 'nropass';
+$user = 'liodev';
+$pass = 'liopass';
 $pdo = null;
 
 try {

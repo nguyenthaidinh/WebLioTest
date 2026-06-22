@@ -1,9 +1,9 @@
 <?php
 // connect.php
-$ip_sv = "127.0.0.1";
+$ip_sv = "180.93.54.5";
 $dbname_sv = "team2026";
-$user_sv = "nro";
-$pass_sv = "nropass";
+$user_sv = "liodev";
+$pass_sv = "liopass";
 
 $conn = new mysqli($ip_sv, $user_sv, $pass_sv, $dbname_sv);
 

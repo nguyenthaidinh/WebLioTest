@@ -1,11 +1,11 @@
 <?php
 $_domain = 'http://nro.liodev.io.vn'; // điền domain của sự kiện giới thiệu của bạn
-$_IP = '163.61.182.199'; // IP hiển thị ở phần cuối trang
+$_IP = '180.93.54.5'; // IP hiển thị ở phần cuối trang
 
 // MySQL
-$db_host = "127.0.0.1";
-$db_user = "nro";
-$db_pass = "nropass";
+$db_host = "180.93.54.5";
+$db_user = "liodev";
+$db_pass = "liopass";
 $db_name = "team2026";
 
 // API
