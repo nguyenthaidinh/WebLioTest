@@ -17,6 +17,14 @@ $qr_file_path = substr($qr_recharge_path, 0, 1) === '/'
     ? dirname(__DIR__) . $qr_recharge_path
     : dirname(__DIR__) . '/' . ltrim($qr_recharge_path, '/');
 $has_qr_image = is_file($qr_file_path);
+$qr_recharge_src = $qr_recharge_url;
+if ($has_qr_image) {
+    $qr_content_hash = @hash_file('sha256', $qr_file_path);
+    if (is_string($qr_content_hash) && $qr_content_hash !== '') {
+        $qr_recharge_src .= (strpos($qr_recharge_src, '?') === false ? '?' : '&')
+            . 'v=' . substr($qr_content_hash, 0, 12);
+    }
+}
 $transfer_content = 'Hãy để mặc định';
 
 function recharge_status_label($status, $is_credited = 0) {
@@ -316,7 +324,7 @@ function recharge_status_label($status, $is_credited = 0) {
                                                 <div class="recharge-grid">
                                                     <div class="qr-box">
                                                         <?php if ($has_qr_image) : ?>
-                                                            <img src="<?php echo htmlspecialchars($qr_recharge_url); ?>" alt="QR nạp tiền">
+                                                            <img src="<?php echo htmlspecialchars($qr_recharge_src); ?>" alt="QR nạp tiền">
                                                         <?php else : ?>
                                                             <div class="qr-placeholder">
                                                                 Chưa có mã QR.<br>

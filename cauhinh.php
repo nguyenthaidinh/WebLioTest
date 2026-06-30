@@ -20,6 +20,6 @@ $_taikhoanmm = 'Lio'; // tên tài khoản
 $_bank_name = $_nganhang;
 $_bank_account_number = $_phonemomo;
 $_bank_account_name = $_taikhoanmm;
-$_qr_nap_tien = '/images/qr-nap-tien.png';
+$_qr_nap_tien = '/images/img/qr.png';
 
 ?>
