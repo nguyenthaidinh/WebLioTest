@@ -7,7 +7,7 @@ require_once __DIR__ . '/../forum_data.php';
 include_once __DIR__ . '/account_info.php';
 
 const GOLD_ITEM_ID = 457;
-const GOLD_EXCHANGE_RATE = 50;
+const GOLD_EXCHANGE_RATE = 10;
 const OLD_GOLD_EXCHANGE_RATE = 100;
 const RECHARGE_THANKS_GIFTCODE = 'camonquykhach';
 

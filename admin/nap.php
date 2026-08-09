@@ -1,6 +1,7 @@
 <?php
 include_once 'set.php';
 include_once 'connect.php';
+include_once '../recharge_bonus.php';
 
 if ($_login == null) {
     header("Location: /app/login.php");
@@ -93,11 +94,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new Exception('So luot quay phai la so nguyen tu 0 den 1.000.000.');
                 }
 
+                $bonus_rate = recharge_bonus_rate($amount);
+                $bonus_amount = recharge_bonus_amount($amount);
+                $credit_amount = recharge_credit_amount($amount);
+
                 $stmt_update_account = $conn->prepare("UPDATE account SET vnd = vnd + ?, tongnap = tongnap + ?, luotquay = luotquay + ? WHERE username = ?");
                 if (!$stmt_update_account) {
                     throw new Exception('Loi prepare cong tien: ' . $conn->error);
                 }
-                $stmt_update_account->bind_param("iiis", $amount, $amount, $bonus_spins, $username);
+                $stmt_update_account->bind_param("iiis", $credit_amount, $amount, $bonus_spins, $username);
                 $stmt_update_account->execute();
                 if ($stmt_update_account->affected_rows === 0) {
                     throw new Exception('Khong tim thay tai khoan de cong tien.');
@@ -113,7 +118,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt_update_request->close();
 
                 $conn->commit();
-                $_alert = admin_set_alert('Da duyet va cong ' . number_format($amount, 0, ',', '.') . ' VND, them ' . number_format($bonus_spins, 0, ',', '.') . ' luot quay cho ' . $username . '.');
+                $_alert = admin_set_alert(
+                    'Da duyet va cong ' . number_format($credit_amount, 0, ',', '.') . ' VND'
+                    . ' (goc ' . number_format($amount, 0, ',', '.')
+                    . ' + KM ' . $bonus_rate . '% = ' . number_format($bonus_amount, 0, ',', '.') . '), them '
+                    . number_format($bonus_spins, 0, ',', '.') . ' luot quay cho ' . $username . '.'
+                );
             } catch (Exception $e) {
                 $conn->rollback();
                 $_alert = admin_set_alert($e->getMessage(), 'error');
@@ -241,6 +251,7 @@ $requests = $conn->query("
                             <th>ID</th>
                             <th>Tài khoản</th>
                             <th>Số tiền</th>
+                            <th>VND cộng</th>
                             <th>Trạng thái</th>
                             <th>Thời gian</th>
                             <th>Mã/Ghi chú</th>
@@ -251,12 +262,22 @@ $requests = $conn->query("
                         <?php while ($request = $requests->fetch_assoc()) : ?>
                             <?php
                                 [$label, $class] = admin_recharge_status_label($request['status'], $request['is_credited']);
-                                $default_bonus_spins = intdiv((int)$request['amount'], 10000);
+                                $request_amount = (int)$request['amount'];
+                                $default_bonus_spins = intdiv($request_amount, 10000);
+                                $bonus_rate = recharge_bonus_rate($request_amount);
+                                $bonus_amount = recharge_bonus_amount($request_amount);
+                                $credit_amount = recharge_credit_amount($request_amount);
                             ?>
                             <tr>
                                 <td>#<?php echo (int)$request['id']; ?></td>
                                 <td><?php echo htmlspecialchars($request['username']); ?></td>
-                                <td style="color:#4ade80;font-weight:800;"><?php echo number_format((int)$request['amount'], 0, ',', '.'); ?> VND</td>
+                                <td style="color:#4ade80;font-weight:800;"><?php echo number_format($request_amount, 0, ',', '.'); ?> VND</td>
+                                <td style="color:#febb12;font-weight:800;">
+                                    <?php echo number_format($credit_amount, 0, ',', '.'); ?> VND
+                                    <?php if ($bonus_rate > 0) : ?>
+                                        <br><span style="font-size:10px;color:#93c5fd;">KM <?php echo $bonus_rate; ?>%: +<?php echo number_format($bonus_amount, 0, ',', '.'); ?></span>
+                                    <?php endif; ?>
+                                </td>
                                 <td><span class="status-badge status-<?php echo htmlspecialchars($class); ?>"><?php echo htmlspecialchars($label); ?></span></td>
                                 <td><?php echo htmlspecialchars($request['created_at']); ?></td>
                                 <td style="max-width:320px;word-break:break-word;"><?php echo htmlspecialchars($request['description'] ?: $request['transaction_id']); ?></td>

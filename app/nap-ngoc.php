@@ -7,6 +7,7 @@ include_once '../connect.php';
 include_once '../forum_data.php';
 include_once '../cauhinh.php';
 include_once '../data_nap_the.php';
+include_once '../recharge_bonus.php';
 
 $bank_name = $_bank_name ?? $_nganhang ?? '';
 $bank_account_name = $_bank_account_name ?? $_taikhoanmm ?? '';
@@ -172,6 +173,41 @@ function recharge_status_label($status, $is_credited = 0) {
             font-size: 12px;
             line-height: 1.5;
             margin: 8px 0 0;
+        }
+        .promo-tiers {
+            background: #fff1c7;
+            border: 1px solid #f59e0b;
+            border-radius: 7px;
+            color: #713f12;
+            font-size: 12px;
+            margin-top: 10px;
+            padding: 9px;
+        }
+        .promo-tiers-title {
+            color: #7c2d12;
+            font-weight: 900;
+            margin-bottom: 7px;
+            text-align: center;
+        }
+        .promo-tiers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+            gap: 6px;
+        }
+        .promo-tier {
+            align-items: center;
+            background: #fff8ec;
+            border: 1px solid #f6b35d;
+            border-radius: 5px;
+            display: flex;
+            font-weight: 800;
+            gap: 8px;
+            justify-content: space-between;
+            padding: 6px 7px;
+        }
+        .promo-tier span:last-child {
+            color: #dc2626;
+            white-space: nowrap;
         }
         .history-table {
             width: 100%;
@@ -355,6 +391,17 @@ function recharge_status_label($status, $is_credited = 0) {
                                                             <button class="copy-btn" type="button" data-copy="<?php echo htmlspecialchars($transfer_content); ?>">Copy</button>
                                                         </div>
                                                         <p class="recharge-note">Tích lũy 10.000 = 1 lượt quay may mắn.</p>
+                                                        <div class="promo-tiers">
+                                                            <div class="promo-tiers-title">Khuyến mãi nạp tiền</div>
+                                                            <div class="promo-tiers-grid">
+                                                                <?php foreach (array_reverse(recharge_bonus_tiers(), true) as $threshold => $rate) : ?>
+                                                                    <div class="promo-tier">
+                                                                        <span>Từ <?php echo number_format((int)$threshold, 0, ',', '.'); ?></span>
+                                                                        <span>+<?php echo (int)$rate; ?>%</span>
+                                                                    </div>
+                                                                <?php endforeach; ?>
+                                                            </div>
+                                                        </div>
                                                         <p class="recharge-note">Sau khi chuyển khoản, nhập số tiền và mã giao dịch/nội dung chuyển khoản để admin kiểm tra rồi duyệt VND.</p>
                                                     </div>
                                                 </div>
