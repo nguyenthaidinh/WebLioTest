@@ -9,6 +9,21 @@ $_alert = '';
 $logged_in_user_id = $_SESSION['id'] ?? null;
 $logged_in_username = $_SESSION['username'] ?? null;
 
+function versioned_local_asset_url($web_path) {
+    $path = parse_url($web_path, PHP_URL_PATH);
+    if (!is_string($path) || $path === '' || $path[0] !== '/') {
+        return $web_path;
+    }
+
+    $file_path = __DIR__ . str_replace('/', DIRECTORY_SEPARATOR, $path);
+    if (!is_file($file_path)) {
+        return $web_path;
+    }
+
+    $separator = strpos($web_path, '?') === false ? '?' : '&';
+    return $web_path . $separator . 'v=' . filemtime($file_path);
+}
+
 $logged_in_player_gender = 0;
 $logged_in_player_head = 0;
 $is_admin = 0;
@@ -112,9 +127,10 @@ if ($post_id !== null && isset($conn)) {
                     $image_source = $post_image_raw;
                 }
                 if (filter_var($image_source, FILTER_VALIDATE_URL)) {
-                    $post_image_path = htmlspecialchars($image_source);
+                    $post_image_path = $image_source;
                 } else {
-                    $post_image_path = '/images/forum/' . htmlspecialchars($image_source);
+                    $image_source = ltrim(str_replace('\\', '/', (string)$image_source), '/');
+                    $post_image_path = versioned_local_asset_url('/images/forum/' . $image_source);
                 }
             }
             $post_detail['display_image_path'] = $post_image_path;
