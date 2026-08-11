@@ -146,53 +146,123 @@ function lucky_pick_reward($rewards) {
     return $rewards[0];
 }
 
-function lucky_find_reward_index($rewards, $spin_result) {
-    if (!is_array($spin_result)) {
-        return null;
+function lucky_format_degrees($degrees) {
+    return rtrim(rtrim(number_format((float)$degrees, 4, '.', ''), '0'), '.');
+}
+
+function lucky_is_ajax_request() {
+    $requested_with = strtolower((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''));
+    $accept = strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? ''));
+
+    return $requested_with === 'xmlhttprequest' || strpos($accept, 'application/json') !== false;
+}
+
+function lucky_json_response($payload, $status_code = 200) {
+    http_response_code($status_code);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit();
+}
+
+function lucky_build_wheel_segments($rewards) {
+    $total_weight = lucky_rewards_total_weight($rewards);
+    if ($total_weight <= 0) {
+        return [];
     }
 
-    $result_key = isset($spin_result['reward_key']) ? (string)$spin_result['reward_key'] : '';
-    if ($result_key !== '') {
-        foreach ($rewards as $index => $reward) {
-            if ((string)$reward['reward_key'] === $result_key) {
-                return $index;
-            }
+    $segments = [];
+    $cursor = 0.0;
+    foreach ($rewards as $reward) {
+        $weight = max(0, (int)$reward['weight']);
+        if ($weight <= 0) {
+            continue;
         }
+
+        $degrees = ($weight / $total_weight) * 360;
+        $start = $cursor;
+        $end = $cursor + $degrees;
+        $segments[] = [
+            'reward_key' => (string)$reward['reward_key'],
+            'label' => (string)$reward['label'],
+            'amount' => (int)$reward['amount'],
+            'color' => (string)$reward['color'],
+            'weight' => $weight,
+            'start' => $start,
+            'end' => $end,
+            'degrees' => $degrees,
+            'center' => $start + ($degrees / 2),
+        ];
+        $cursor = $end;
     }
 
-    $result_label = isset($spin_result['label']) ? (string)$spin_result['label'] : '';
-    $has_amount = array_key_exists('amount', $spin_result);
-    $result_amount = $has_amount ? (int)$spin_result['amount'] : null;
+    if (!empty($segments)) {
+        $last_index = count($segments) - 1;
+        $segments[$last_index]['end'] = 360.0;
+        $segments[$last_index]['degrees'] = $segments[$last_index]['end'] - $segments[$last_index]['start'];
+        $segments[$last_index]['center'] = $segments[$last_index]['start'] + ($segments[$last_index]['degrees'] / 2);
+    }
 
-    foreach ($rewards as $index => $reward) {
-        if (
-            $result_label !== ''
-            && (string)$reward['label'] === $result_label
-            && (!$has_amount || (int)$reward['amount'] === $result_amount)
-        ) {
-            return $index;
+    return $segments;
+}
+
+function lucky_find_wheel_segment($segments, $reward_key) {
+    foreach ($segments as $segment) {
+        if ((string)$segment['reward_key'] === (string)$reward_key) {
+            return $segment;
         }
     }
 
     return null;
 }
 
-function lucky_wheel_rotation_for_index($index, $segment_degrees, $turns = 8) {
-    if ($index === null || $segment_degrees <= 0) {
+function lucky_wheel_target_for_reward($segments, $reward_key) {
+    $segment = lucky_find_wheel_segment($segments, $reward_key);
+    if ($segment === null) {
         return null;
     }
 
-    $center_angle = -90 + ($index * $segment_degrees) + ($segment_degrees / 2);
-    $target_rotation = fmod(360 - fmod($center_angle, 360), 360);
-    if ($target_rotation < 0) {
-        $target_rotation += 360;
+    $start = (float)$segment['start'];
+    $end = (float)$segment['end'];
+    $span = max(0.0, $end - $start);
+    $landing_angle = $start + ($span / 2);
+
+    if ($span > 3) {
+        $padding = min(12.0, max(1.2, $span * 0.14));
+        if (($end - $padding) > ($start + $padding)) {
+            $min = (int)round(($start + $padding) * 1000);
+            $max = (int)round(($end - $padding) * 1000);
+            $landing_angle = random_int($min, $max) / 1000;
+        }
     }
 
-    return ($turns * 360) + $target_rotation;
+    $target_modulo = fmod(360 - fmod($landing_angle, 360), 360);
+    if ($target_modulo < 0) {
+        $target_modulo += 360;
+    }
+
+    $turns = random_int(7, 10);
+
+    return [
+        'landing_angle' => lucky_format_degrees($landing_angle),
+        'target_rotation' => lucky_format_degrees($target_modulo),
+        'turns' => $turns,
+    ];
 }
 
-function lucky_format_degrees($degrees) {
-    return rtrim(rtrim(number_format((float)$degrees, 4, '.', ''), '0'), '.');
+function lucky_segment_json($segments) {
+    $data = [];
+    foreach ($segments as $segment) {
+        $data[] = [
+            'reward_key' => $segment['reward_key'],
+            'label' => $segment['label'],
+            'amount' => (int)$segment['amount'],
+            'start' => (float)$segment['start'],
+            'end' => (float)$segment['end'],
+            'center' => (float)$segment['center'],
+        ];
+    }
+
+    return $data;
 }
 
 function lucky_get_account_state($conn, $account_id) {
@@ -292,7 +362,7 @@ function lucky_handle_spin($conn, $account_id, $rewards) {
     $conn->begin_transaction();
 
     try {
-        $stmt_account = $conn->prepare("SELECT luotquay FROM account WHERE id = ? FOR UPDATE");
+        $stmt_account = $conn->prepare("SELECT luotquay, thoi_vang FROM account WHERE id = ? FOR UPDATE");
         if (!$stmt_account) {
             throw new Exception('Loi prepare tai khoan: ' . $conn->error);
         }
@@ -307,6 +377,7 @@ function lucky_handle_spin($conn, $account_id, $rewards) {
         }
 
         $current_spins = (int)($account['luotquay'] ?? 0);
+        $current_gold = (int)($account['thoi_vang'] ?? 0);
         if ($current_spins <= 0) {
             throw new Exception('Bạn chưa có lượt quay.');
         }
@@ -327,8 +398,13 @@ function lucky_handle_spin($conn, $account_id, $rewards) {
 
         $conn->commit();
         $_SESSION['luotquay'] = $current_spins - 1;
+        $_SESSION['thoi_vang'] = $current_gold + $reward_amount;
 
-        return $reward;
+        return [
+            'reward' => $reward,
+            'remaining_spins' => $current_spins - 1,
+            'pending_gold' => $current_gold + $reward_amount,
+        ];
     } catch (Exception $e) {
         $conn->rollback();
         throw $e;
@@ -441,7 +517,20 @@ if ($is_logged_in) {
     }
 }
 
-if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST') {
+$wheel_segments = lucky_build_wheel_segments($lucky_rewards);
+$is_ajax_request = lucky_is_ajax_request();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$is_logged_in) {
+        if ($is_ajax_request) {
+            lucky_json_response(['ok' => false, 'message' => 'Bạn cần đăng nhập để thao tác.'], 401);
+        }
+
+        lucky_set_message('Bạn cần đăng nhập để thao tác.', 'error');
+        header("Location: /app/vong-quay.php");
+        exit();
+    }
+
     try {
         $posted_token = $_POST['csrf_token'] ?? '';
         if (!is_string($posted_token) || !hash_equals($csrf_token, $posted_token)) {
@@ -455,28 +544,79 @@ if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $spin_reward = lucky_handle_daily_checkin($conn, $account_id);
             lucky_set_message('Điểm danh thành công, bạn nhận ' . $spin_reward . ' lượt quay.', 'success');
+            if ($is_ajax_request) {
+                lucky_json_response([
+                    'ok' => true,
+                    'message' => 'Điểm danh thành công, bạn nhận ' . $spin_reward . ' lượt quay.',
+                    'state' => lucky_get_account_state($conn, $account_id),
+                    'checked_in_today' => true,
+                ]);
+            }
         } elseif ($action === 'lucky_spin') {
-            $reward = lucky_handle_spin($conn, $account_id, $lucky_rewards);
+            $spin = lucky_handle_spin($conn, $account_id, $lucky_rewards);
+            $reward = $spin['reward'];
+            $visual_target = lucky_wheel_target_for_reward($wheel_segments, $reward['reward_key']);
+            if ($visual_target === null) {
+                throw new Exception('Không thể xác định vị trí phần thưởng trên vòng quay.');
+            }
+
             if ((int)$reward['amount'] > 0) {
+                $result_payload = [
+                    'type' => 'win',
+                    'reward_key' => $reward['reward_key'],
+                    'label' => $reward['label'],
+                    'amount' => (int)$reward['amount'],
+                ];
                 lucky_set_message(
                     'Chúc mừng! Bạn trúng ' . $reward['label'] . '.',
                     'success',
-                    ['type' => 'win', 'reward_key' => $reward['reward_key'], 'label' => $reward['label'], 'amount' => (int)$reward['amount']]
+                    $result_payload
                 );
             } else {
+                $result_payload = [
+                    'type' => 'miss',
+                    'reward_key' => $reward['reward_key'],
+                    'label' => $reward['label'],
+                    'amount' => 0,
+                ];
                 lucky_set_message(
                     'Chúc may mắn lần sau.',
                     'warning',
-                    ['type' => 'miss', 'reward_key' => $reward['reward_key'], 'label' => $reward['label'], 'amount' => 0]
+                    $result_payload
                 );
+            }
+
+            if ($is_ajax_request) {
+                lucky_json_response([
+                    'ok' => true,
+                    'message' => (int)$reward['amount'] > 0
+                        ? 'Chúc mừng! Bạn trúng ' . $reward['label'] . '.'
+                        : 'Chúc may mắn lần sau.',
+                    'result' => array_merge($result_payload, $visual_target),
+                    'state' => [
+                        'luotquay' => (int)$spin['remaining_spins'],
+                        'thoi_vang' => (int)$spin['pending_gold'],
+                    ],
+                ]);
             }
         } elseif ($action === 'withdraw_gold') {
             $withdrawn_amount = lucky_handle_withdraw_gold($conn, $account_id, $current_player_id);
             lucky_set_message('Rút thành công ' . number_format($withdrawn_amount, 0, ',', '.') . ' TV vào túi đồ.', 'success');
+            if ($is_ajax_request) {
+                lucky_json_response([
+                    'ok' => true,
+                    'message' => 'Rút thành công ' . number_format($withdrawn_amount, 0, ',', '.') . ' TV vào túi đồ.',
+                    'state' => lucky_get_account_state($conn, $account_id),
+                ]);
+            }
         } else {
-            throw new Exception('Thao tac khong hop le.');
+            throw new Exception('Thao tác không hợp lệ.');
         }
     } catch (Exception $e) {
+        if ($is_ajax_request) {
+            lucky_json_response(['ok' => false, 'message' => $e->getMessage()], 400);
+        }
+
         lucky_set_message($e->getMessage(), 'error');
     }
 
@@ -490,19 +630,19 @@ $pending_gold = (int)$account_state['thoi_vang'];
 $checked_in_today = $is_logged_in && $checkin_table_ready ? lucky_has_checked_in_today($conn, $account_id) : false;
 
 $wheel_gradient_parts = [];
-$wheel_segment_count = max(1, count($lucky_rewards));
-$wheel_segment_degrees = 360 / $wheel_segment_count;
-$wheel_cursor = 0;
-foreach ($lucky_rewards as $reward) {
-    $wheel_gradient_parts[] = $reward['color'] . ' ' . round($wheel_cursor, 4) . 'deg ' . round($wheel_cursor + $wheel_segment_degrees, 4) . 'deg';
-    $wheel_cursor += $wheel_segment_degrees;
+foreach ($wheel_segments as $segment) {
+    $wheel_gradient_parts[] = $segment['color'] . ' ' . lucky_format_degrees($segment['start']) . 'deg ' . lucky_format_degrees($segment['end']) . 'deg';
 }
-$wheel_gradient = implode(', ', $wheel_gradient_parts);
-$wheel_segment_css = rtrim(rtrim(number_format($wheel_segment_degrees, 4, '.', ''), '0'), '.');
-$wheel_result_index = lucky_find_reward_index($lucky_rewards, $spin_result);
-$wheel_settled_rotation = lucky_wheel_rotation_for_index($wheel_result_index, $wheel_segment_degrees);
-$wheel_settled_rotation_text = $wheel_settled_rotation !== null ? lucky_format_degrees($wheel_settled_rotation) : '';
+$wheel_gradient = !empty($wheel_gradient_parts) ? implode(', ', $wheel_gradient_parts) : '#64748b 0deg 360deg';
+$wheel_segment_count = max(1, count($wheel_segments));
+$wheel_result_key = is_array($spin_result) ? (string)($spin_result['reward_key'] ?? '') : '';
+$wheel_settled_target = $wheel_result_key !== '' ? lucky_wheel_target_for_reward($wheel_segments, $wheel_result_key) : null;
+$wheel_settled_rotation_text = $wheel_settled_target !== null ? lucky_format_degrees($wheel_settled_target['target_rotation']) : '';
 $wheel_class = 'wheel' . ($wheel_settled_rotation_text !== '' ? ' has-result' : '');
+$wheel_config = [
+    'segments' => lucky_segment_json($wheel_segments),
+    'spinDurationMs' => 6200,
+];
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -517,23 +657,23 @@ $wheel_class = 'wheel' . ($wheel_settled_rotation_text !== '' ? ' has-result' : 
     <script src="/view/static/js/disable_devtools.js"></script>
     <style>
         .lucky-wrap {
-            max-width: 760px;
+            max-width: 820px;
             margin: 0 auto;
             color: #2d1600;
         }
         .lucky-panel {
-            background: linear-gradient(180deg, #fffaf0 0%, #fff3d8 100%);
-            border: 1px solid #f6b35d;
-            border-radius: 10px;
-            padding: 16px;
+            background: linear-gradient(180deg, #fffaf0 0%, #fff7e4 52%, #fff0cf 100%);
+            border: 1px solid #efbd67;
+            border-radius: 8px;
+            padding: 18px;
             margin: 10px;
             text-align: center;
-            box-shadow: 0 10px 26px rgba(124, 45, 18, 0.18);
+            box-shadow: 0 14px 32px rgba(124, 45, 18, 0.18);
         }
         .lucky-panel h2 {
             color: #7c2d12;
-            font-size: 20px;
-            margin: 0 0 8px;
+            font-size: 22px;
+            margin: 0 0 10px;
             font-weight: 900;
         }
         .lucky-status {
@@ -547,9 +687,12 @@ $wheel_class = 'wheel' . ($wheel_settled_rotation_text !== '' ? ' has-result' : 
         .lucky-status span {
             background: #fff;
             border: 1px solid #f0c27b;
-            border-radius: 999px;
+            border-radius: 8px;
             padding: 7px 11px;
             box-shadow: 0 2px 5px rgba(124, 45, 18, 0.08);
+        }
+        .lucky-status strong {
+            color: #b45309;
         }
         .lucky-note {
             margin: 0 0 10px;
@@ -659,22 +802,45 @@ $wheel_class = 'wheel' . ($wheel_settled_rotation_text !== '' ? ' has-result' : 
         }
         .wheel-area {
             position: relative;
-            width: min(82vw, 370px);
+            width: min(84vw, 410px);
             aspect-ratio: 1;
-            margin: 14px auto 18px;
+            margin: 16px auto 10px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.85) 0 50%, rgba(251,191,36,0.22) 51% 64%, transparent 65%);
+            padding: 12px;
+            box-sizing: border-box;
         }
         .wheel-pointer {
             position: absolute;
-            top: -9px;
+            top: -4px;
             left: 50%;
             transform: translateX(-50%);
             width: 0;
             height: 0;
-            border-left: 17px solid transparent;
-            border-right: 17px solid transparent;
-            border-top: 35px solid #dc2626;
+            border-left: 16px solid transparent;
+            border-right: 16px solid transparent;
+            border-top: 34px solid #dc2626;
             filter: drop-shadow(0 3px 2px rgba(0,0,0,0.28));
-            z-index: 5;
+            z-index: 8;
+            transform-origin: 50% 2px;
+        }
+        .wheel-pointer::after {
+            content: "";
+            position: absolute;
+            left: -5px;
+            top: -38px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2px solid #7f1d1d;
+        }
+        .wheel-area.is-spinning .wheel-pointer {
+            animation: pointerTick 130ms linear infinite;
+        }
+        @keyframes pointerTick {
+            0%, 100% { transform: translateX(-50%) rotate(0deg); }
+            45% { transform: translateX(-50%) rotate(-9deg); }
         }
         .wheel {
             position: relative;
@@ -683,14 +849,15 @@ $wheel_class = 'wheel' . ($wheel_settled_rotation_text !== '' ? ' has-result' : 
             border-radius: 50%;
             overflow: hidden;
             background:
-                repeating-conic-gradient(from -90deg, rgba(255,255,255,0.75) 0deg 1.4deg, transparent 1.4deg <?php echo htmlspecialchars($wheel_segment_css); ?>deg),
+                radial-gradient(circle at 50% 36%, rgba(255,255,255,0.42), transparent 24%),
                 conic-gradient(from -90deg, <?php echo htmlspecialchars($wheel_gradient); ?>);
-            border: 10px solid #7c2d12;
+            border: 12px solid #6b2708;
             box-shadow:
                 inset 0 0 0 5px rgba(255,255,255,0.65),
-                inset 0 0 24px rgba(0,0,0,0.16),
-                0 12px 26px rgba(124,45,18,0.35);
-            transition: transform 4.2s cubic-bezier(0.08, 0.72, 0.08, 1);
+                inset 0 0 32px rgba(0,0,0,0.18),
+                0 16px 30px rgba(124,45,18,0.34);
+            transform: rotate(0deg);
+            will-change: transform;
         }
         .wheel::after {
             content: "";
@@ -702,16 +869,39 @@ $wheel_class = 'wheel' . ($wheel_settled_rotation_text !== '' ? ' has-result' : 
             box-shadow: 0 0 0 3px rgba(255,255,255,0.75);
             z-index: 2;
         }
+        .wheel::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background:
+                radial-gradient(circle at 35% 26%, rgba(255,255,255,0.34), transparent 18%),
+                radial-gradient(circle at 50% 50%, transparent 0 55%, rgba(0,0,0,0.16) 100%);
+            pointer-events: none;
+            z-index: 3;
+        }
+        .wheel-separator {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 50%;
+            height: 1px;
+            background: rgba(255,255,255,0.74);
+            transform: rotate(calc(var(--angle) - 90deg));
+            transform-origin: 0 50%;
+            z-index: 1;
+            pointer-events: none;
+        }
         .wheel-label {
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 84px;
+            width: 92px;
             min-height: 22px;
             display: flex;
             align-items: center;
             justify-content: center;
-            transform: translate(-50%, -50%) rotate(var(--angle)) translateY(-132px) rotate(90deg);
+            transform: translate(-50%, -50%) rotate(var(--angle)) translateY(-145px) rotate(90deg);
             transform-origin: center;
             color: #fff;
             font-size: 11px;
@@ -725,9 +915,9 @@ $wheel_class = 'wheel' . ($wheel_settled_rotation_text !== '' ? ' has-result' : 
         .wheel-center {
             position: absolute;
             inset: 36%;
-            z-index: 3;
+            z-index: 5;
             border-radius: 50%;
-            background: linear-gradient(180deg, #fb923c 0%, #f97316 100%);
+            background: radial-gradient(circle at 35% 28%, #fed7aa 0%, #fb923c 28%, #ea580c 100%);
             color: #fff;
             display: grid;
             place-items: center;
@@ -762,8 +952,46 @@ $wheel_class = 'wheel' . ($wheel_settled_rotation_text !== '' ? ' has-result' : 
         .wheel.has-result {
             transform: rotate(var(--settled-rotation, 0deg));
         }
-        .wheel.is-spinning {
-            transform: rotate(var(--spin-rotation, 2880deg));
+        .wheel-area.is-spinning .wheel-center,
+        .wheel-area.is-settling .wheel-center {
+            pointer-events: none;
+        }
+        .spin-live-status {
+            min-height: 28px;
+            margin: 8px auto 4px;
+            color: #7c2d12;
+            font-size: 12px;
+            font-weight: 900;
+        }
+        .spin-live-status.is-active {
+            color: #b45309;
+        }
+        .reward-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: center;
+            margin: 8px auto 14px;
+            max-width: 620px;
+        }
+        .reward-pill {
+            align-items: center;
+            background: rgba(255,255,255,0.78);
+            border: 1px solid #f0c27b;
+            border-radius: 8px;
+            color: #5b2b05;
+            display: inline-flex;
+            font-size: 11px;
+            font-weight: 900;
+            gap: 5px;
+            padding: 5px 8px;
+        }
+        .reward-pill i {
+            border-radius: 50%;
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.75);
+            display: inline-block;
+            height: 9px;
+            width: 9px;
         }
         .spin-button,
         .checkin-button,
@@ -850,10 +1078,16 @@ $wheel_class = 'wheel' . ($wheel_settled_rotation_text !== '' ? ' has-result' : 
             font-weight: 800;
         }
         @media (max-width: 420px) {
+            .lucky-panel {
+                padding: 13px;
+            }
+            .wheel-area {
+                padding: 9px;
+            }
             .wheel-label {
-                width: 68px;
+                width: 64px;
                 font-size: 9px;
-                transform: translate(-50%, -50%) rotate(var(--angle)) translateY(-108px) rotate(90deg);
+                transform: translate(-50%, -50%) rotate(var(--angle)) translateY(-116px) rotate(90deg);
             }
             .withdraw-form {
                 grid-template-columns: 1fr;
@@ -889,10 +1123,10 @@ $wheel_class = 'wheel' . ($wheel_settled_rotation_text !== '' ? ' has-result' : 
                                         <div class="quick-links"><a href="/app/login.php">Đăng nhập</a></div>
                                     <?php else: ?>
                                         <div class="lucky-status">
-                                            <span>Nhân vật: <?php echo htmlspecialchars($player_name); ?></span>
-                                            <span>Lượt quay: <?php echo number_format($remaining_spins, 0, ',', '.'); ?></span>
-                                            <span>TV chờ rút: <?php echo number_format($pending_gold, 0, ',', '.'); ?></span>
-                                            <span><?php echo $checked_in_today ? 'Đã điểm danh hôm nay' : 'Chưa điểm danh hôm nay'; ?></span>
+                                            <span>Nhân vật: <strong><?php echo htmlspecialchars($player_name); ?></strong></span>
+                                            <span>Lượt quay: <strong id="remainingSpinsText"><?php echo number_format($remaining_spins, 0, ',', '.'); ?></strong></span>
+                                            <span>TV chờ rút: <strong id="pendingGoldText"><?php echo number_format($pending_gold, 0, ',', '.'); ?></strong></span>
+                                            <span id="checkinStatusText"><?php echo $checked_in_today ? 'Đã điểm danh hôm nay' : 'Chưa điểm danh hôm nay'; ?></span>
                                         </div>
                                         <p class="lucky-note">Mỗi ngày điểm danh nhận 1 lượt quay. Tích lũy 10.000 = 1 lượt quay. Trúng TV sẽ vào kho chờ rút; thoát game trước khi rút TV.</p>
 
@@ -900,39 +1134,37 @@ $wheel_class = 'wheel' . ($wheel_settled_rotation_text !== '' ? ' has-result' : 
                                             <div class="message error"><?php echo htmlspecialchars($checkin_table_error); ?></div>
                                         <?php endif; ?>
 
-                                        <?php if (is_array($spin_result)): ?>
-                                            <?php
-                                                $result_type = ($spin_result['type'] ?? '') === 'win' ? 'win' : 'miss';
-                                                $result_label = (string)($spin_result['label'] ?? '');
-                                                $result_amount = (int)($spin_result['amount'] ?? 0);
-                                            ?>
-                                            <div class="spin-result-card <?php echo htmlspecialchars($result_type); ?>" id="spinResult">
-                                                <?php if ($result_type === 'win'): ?>
-                                                    <div class="result-eyebrow">Kết quả quay</div>
-                                                    <div class="result-title">Chúc mừng bạn đã trúng</div>
-                                                    <div class="result-prize"><?php echo htmlspecialchars($result_label); ?></div>
-                                                    <div class="result-desc">
-                                                        <?php echo number_format($result_amount, 0, ',', '.'); ?> TV đã được cộng vào kho chờ rút. Hãy thoát game trước khi rút vào túi đồ.
-                                                    </div>
-                                                    <div class="result-actions">
-                                                        <a class="result-link" href="#withdrawGold">Rút thỏi vàng</a>
-                                                        <a class="result-link secondary" href="/app/vong-quay.php">Quay tiếp</a>
-                                                    </div>
-                                                <?php else: ?>
-                                                    <div class="result-eyebrow">Kết quả quay</div>
-                                                    <div class="result-title">Chúc bạn may mắn lần sau</div>
-                                                    <div class="result-prize"><?php echo htmlspecialchars($result_label ?: 'Chúc may mắn'); ?></div>
-                                                    <div class="result-desc">Lần này chưa trúng TV, bạn có thể điểm danh hoặc tích lũy nạp để nhận thêm lượt quay.</div>
-                                                    <div class="result-actions">
-                                                        <a class="result-link secondary" href="/app/vong-quay.php">Quay tiếp</a>
-                                                    </div>
-                                                <?php endif; ?>
-                                            </div>
-                                        <?php elseif ($message !== ''): ?>
-                                            <div class="message <?php echo htmlspecialchars($message_type); ?>">
-                                                <?php echo htmlspecialchars($message); ?>
-                                            </div>
-                                        <?php endif; ?>
+                                        <div id="spinResultSlot">
+                                            <?php if (is_array($spin_result)): ?>
+                                                <?php
+                                                    $result_type = ($spin_result['type'] ?? '') === 'win' ? 'win' : 'miss';
+                                                    $result_label = (string)($spin_result['label'] ?? '');
+                                                    $result_amount = (int)($spin_result['amount'] ?? 0);
+                                                ?>
+                                                <div class="spin-result-card <?php echo htmlspecialchars($result_type); ?>" id="spinResult">
+                                                    <?php if ($result_type === 'win'): ?>
+                                                        <div class="result-eyebrow">Kết quả quay</div>
+                                                        <div class="result-title">Chúc mừng bạn đã trúng</div>
+                                                        <div class="result-prize"><?php echo htmlspecialchars($result_label); ?></div>
+                                                        <div class="result-desc">
+                                                            <?php echo number_format($result_amount, 0, ',', '.'); ?> TV đã được cộng vào kho chờ rút. Hãy thoát game trước khi rút vào túi đồ.
+                                                        </div>
+                                                        <div class="result-actions">
+                                                            <a class="result-link" href="#withdrawGold">Rút thỏi vàng</a>
+                                                        </div>
+                                                    <?php else: ?>
+                                                        <div class="result-eyebrow">Kết quả quay</div>
+                                                        <div class="result-title">Chúc bạn may mắn lần sau</div>
+                                                        <div class="result-prize"><?php echo htmlspecialchars($result_label ?: 'Chúc may mắn'); ?></div>
+                                                        <div class="result-desc">Lần này chưa trúng TV, bạn có thể điểm danh hoặc tích lũy nạp để nhận thêm lượt quay.</div>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php elseif ($message !== ''): ?>
+                                                <div class="message <?php echo htmlspecialchars($message_type); ?>">
+                                                    <?php echo htmlspecialchars($message); ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
 
                                         <div class="action-row">
                                             <form method="post" action="/app/vong-quay.php">
@@ -952,6 +1184,7 @@ $wheel_class = 'wheel' . ($wheel_settled_rotation_text !== '' ? ' has-result' : 
                                             </form>
                                         </div>
 
+                                        <div id="withdrawGoldSlot">
                                         <?php if ($pending_gold > 0): ?>
                                             <div class="withdraw-box" id="withdrawGold">
                                                 <strong>Rút thỏi vàng vào túi đồ</strong>
@@ -963,18 +1196,28 @@ $wheel_class = 'wheel' . ($wheel_settled_rotation_text !== '' ? ' has-result' : 
                                                 </form>
                                             </div>
                                         <?php endif; ?>
+                                        </div>
 
-                                        <div class="wheel-area">
+                                        <div class="wheel-area" id="wheelArea">
                                             <div class="wheel-pointer"></div>
-                                            <div id="luckyWheel" class="<?php echo htmlspecialchars($wheel_class); ?>"<?php if ($wheel_settled_rotation_text !== ''): ?> style="--settled-rotation: <?php echo htmlspecialchars($wheel_settled_rotation_text); ?>deg;" data-settled-rotation="<?php echo htmlspecialchars($wheel_settled_rotation_text); ?>"<?php endif; ?>>
-                                                <?php foreach ($lucky_rewards as $index => $reward): ?>
-                                                    <?php $label_angle = -90 + ($index * $wheel_segment_degrees) + ($wheel_segment_degrees / 2); ?>
-                                                    <span class="wheel-label" style="--angle: <?php echo round($label_angle, 4); ?>deg;">
-                                                        <?php echo htmlspecialchars($reward['label']); ?>
-                                                    </span>
+                                            <div id="luckyWheel" class="<?php echo htmlspecialchars($wheel_class); ?>" data-current-rotation="<?php echo htmlspecialchars($wheel_settled_rotation_text !== '' ? $wheel_settled_rotation_text : '0'); ?>"<?php if ($wheel_settled_rotation_text !== ''): ?> style="--settled-rotation: <?php echo htmlspecialchars($wheel_settled_rotation_text); ?>deg;" data-settled-rotation="<?php echo htmlspecialchars($wheel_settled_rotation_text); ?>"<?php endif; ?>>
+                                                <?php foreach ($wheel_segments as $segment): ?>
+                                                    <span class="wheel-separator" style="--angle: <?php echo htmlspecialchars(lucky_format_degrees($segment['start'])); ?>deg;"></span>
+                                                    <?php if ((float)$segment['degrees'] >= 7): ?>
+                                                        <span class="wheel-label" style="--angle: <?php echo htmlspecialchars(lucky_format_degrees($segment['center'])); ?>deg;">
+                                                            <?php echo htmlspecialchars($segment['label']); ?>
+                                                        </span>
+                                                    <?php endif; ?>
                                                 <?php endforeach; ?>
                                             </div>
                                             <button id="wheelCenterSpin" class="wheel-center" type="button" <?php echo $remaining_spins <= 0 ? 'disabled' : ''; ?>>Quay</button>
+                                        </div>
+                                        <div class="spin-live-status" id="spinLiveStatus"></div>
+
+                                        <div class="reward-pills">
+                                            <?php foreach ($wheel_segments as $segment): ?>
+                                                <span class="reward-pill"><i style="background: <?php echo htmlspecialchars($segment['color']); ?>"></i><?php echo htmlspecialchars($segment['label']); ?></span>
+                                            <?php endforeach; ?>
                                         </div>
 
                                         <div class="quick-links">
@@ -998,16 +1241,206 @@ $wheel_class = 'wheel' . ($wheel_settled_rotation_text !== '' ? ' has-result' : 
     </div>
 
     <script>
+        window.luckyWheelConfig = <?php echo json_encode($wheel_config, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+    </script>
+    <script>
         (function () {
             var form = document.getElementById('luckySpinForm');
             var wheel = document.getElementById('luckyWheel');
+            var wheelArea = document.getElementById('wheelArea');
             var centerButton = document.getElementById('wheelCenterSpin');
-            var result = document.getElementById('spinResult');
-            if (result) {
+            var resultSlot = document.getElementById('spinResultSlot');
+            var liveStatus = document.getElementById('spinLiveStatus');
+            var remainingSpinsText = document.getElementById('remainingSpinsText');
+            var pendingGoldText = document.getElementById('pendingGoldText');
+            var withdrawGoldSlot = document.getElementById('withdrawGoldSlot');
+            var config = window.luckyWheelConfig || {};
+            var baseDuration = Number(config.spinDurationMs || 6200);
+            var currentRotation = Number(wheel ? wheel.getAttribute('data-current-rotation') : 0) || 0;
+
+            function escapeHtml(value) {
+                return String(value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            function formatNumber(value) {
+                return new Intl.NumberFormat('vi-VN').format(Number(value || 0));
+            }
+
+            function normalizeDegrees(value) {
+                var result = Number(value) % 360;
+                return result < 0 ? result + 360 : result;
+            }
+
+            function secureRandomUnit() {
+                if (window.crypto && window.crypto.getRandomValues) {
+                    var data = new Uint32Array(1);
+                    window.crypto.getRandomValues(data);
+                    return data[0] / 4294967295;
+                }
+
+                return Math.random();
+            }
+
+            function setLiveStatus(text, active) {
+                if (!liveStatus) {
+                    return;
+                }
+
+                liveStatus.textContent = text || '';
+                liveStatus.classList.toggle('is-active', !!active);
+            }
+
+            function setSpinningState(isSpinning, canSpinAgain) {
+                var submitButton = form ? form.querySelector('button[type="submit"]') : null;
+                if (submitButton) {
+                    submitButton.disabled = isSpinning || !canSpinAgain;
+                    submitButton.textContent = isSpinning ? 'Đang quay...' : 'Quay ngay';
+                }
+                if (centerButton) {
+                    centerButton.disabled = isSpinning || !canSpinAgain;
+                    centerButton.textContent = isSpinning ? 'Đang quay' : 'Quay';
+                }
+                if (wheelArea) {
+                    wheelArea.classList.toggle('is-spinning', isSpinning);
+                }
+                if (wheel) {
+                    wheel.classList.toggle('is-spinning', isSpinning);
+                }
+            }
+
+            function updateState(state) {
+                if (!state) {
+                    return;
+                }
+
+                var remaining = Number(state.luotquay || 0);
+                var pendingGold = Number(state.thoi_vang || 0);
+                if (remainingSpinsText) {
+                    remainingSpinsText.textContent = formatNumber(remaining);
+                }
+                if (pendingGoldText) {
+                    pendingGoldText.textContent = formatNumber(pendingGold);
+                }
+                renderWithdrawBox(pendingGold);
+            }
+
+            function renderWithdrawBox(pendingGold) {
+                if (!withdrawGoldSlot) {
+                    return;
+                }
+
+                if (pendingGold <= 0) {
+                    withdrawGoldSlot.innerHTML = '';
+                    return;
+                }
+
+                var token = form ? form.querySelector('input[name="csrf_token"]').value : '';
+                withdrawGoldSlot.innerHTML =
+                    '<div class="withdraw-box" id="withdrawGold">' +
+                        '<strong>Rút thỏi vàng vào túi đồ</strong>' +
+                        '<form class="withdraw-form" method="post" action="/app/vong-quay.php">' +
+                            '<input type="hidden" name="action" value="withdraw_gold">' +
+                            '<input type="hidden" name="csrf_token" value="' + escapeHtml(token) + '">' +
+                            '<input name="withdraw_amount" type="number" min="1" max="' + pendingGold + '" value="' + pendingGold + '" required>' +
+                            '<button class="withdraw-button" type="submit">Rút</button>' +
+                        '</form>' +
+                    '</div>';
+            }
+
+            function resultHtml(result) {
+                var label = escapeHtml(result.label || 'Chúc may mắn');
+                var amount = Number(result.amount || 0);
+
+                if (result.type === 'win') {
+                    return '' +
+                        '<div class="spin-result-card win" id="spinResult">' +
+                            '<div class="result-eyebrow">Kết quả quay</div>' +
+                            '<div class="result-title">Chúc mừng bạn đã trúng</div>' +
+                            '<div class="result-prize">' + label + '</div>' +
+                            '<div class="result-desc">' + formatNumber(amount) + ' TV đã được cộng vào kho chờ rút. Hãy thoát game trước khi rút vào túi đồ.</div>' +
+                            '<div class="result-actions"><a class="result-link" href="#withdrawGold">Rút thỏi vàng</a></div>' +
+                        '</div>';
+                }
+
+                return '' +
+                    '<div class="spin-result-card miss" id="spinResult">' +
+                        '<div class="result-eyebrow">Kết quả quay</div>' +
+                        '<div class="result-title">Chúc bạn may mắn lần sau</div>' +
+                        '<div class="result-prize">' + label + '</div>' +
+                        '<div class="result-desc">Lần này chưa trúng TV, bạn có thể điểm danh hoặc tích lũy nạp để nhận thêm lượt quay.</div>' +
+                    '</div>';
+            }
+
+            function showMessage(message, type) {
+                if (!resultSlot) {
+                    return;
+                }
+
+                resultSlot.innerHTML = '<div class="message ' + escapeHtml(type || 'error') + '">' + escapeHtml(message) + '</div>';
+            }
+
+            function easeOutPhysical(t) {
+                return 1 - Math.pow(1 - t, 4.6);
+            }
+
+            function animateToRotation(finalRotation, duration) {
+                return new Promise(function (resolve) {
+                    var startRotation = currentRotation;
+                    var travel = finalRotation - startRotation;
+                    var startTime = null;
+
+                    function frame(now) {
+                        if (startTime === null) {
+                            startTime = now;
+                        }
+
+                        var progress = Math.min(1, (now - startTime) / duration);
+                        var eased = easeOutPhysical(progress);
+                        var wobble = 0;
+                        if (progress > 0.84 && progress < 0.995) {
+                            var settle = (progress - 0.84) / 0.155;
+                            wobble = Math.sin(settle * Math.PI * 5) * (1 - progress) * 2.6;
+                        }
+
+                        var rotation = startRotation + (travel * eased) + wobble;
+                        wheel.style.transform = 'rotate(' + rotation + 'deg)';
+
+                        if (progress < 1) {
+                            window.requestAnimationFrame(frame);
+                            return;
+                        }
+
+                        currentRotation = finalRotation;
+                        wheel.style.transform = 'rotate(' + finalRotation + 'deg)';
+                        wheel.style.setProperty('--settled-rotation', finalRotation + 'deg');
+                        wheel.setAttribute('data-current-rotation', String(finalRotation));
+                        wheel.setAttribute('data-settled-rotation', String(finalRotation));
+                        wheel.classList.add('has-result');
+                        resolve();
+                    }
+
+                    window.requestAnimationFrame(frame);
+                });
+            }
+
+            function nextFinalRotation(targetModulo, turns) {
+                var currentModulo = normalizeDegrees(currentRotation);
+                var delta = normalizeDegrees(Number(targetModulo) - currentModulo);
+                return currentRotation + (Number(turns || 8) * 360) + delta;
+            }
+
+            var existingResult = document.getElementById('spinResult');
+            if (existingResult) {
                 window.setTimeout(function () {
-                    result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    existingResult.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }, 120);
             }
+
             if (!form || !wheel) {
                 return;
             }
@@ -1023,30 +1456,74 @@ $wheel_class = 'wheel' . ($wheel_settled_rotation_text !== '' ? ' has-result' : 
             }
 
             form.addEventListener('submit', function (event) {
-                if (form.dataset.submitting === '1') {
+                event.preventDefault();
+                if (form.dataset.spinning === '1') {
                     return;
                 }
 
-                event.preventDefault();
-                var button = form.querySelector('button[type="submit"]');
-                if (button) {
-                    button.disabled = true;
-                }
-                if (centerButton) {
-                    centerButton.disabled = true;
-                    centerButton.textContent = 'Đang quay';
+                var submitButton = form.querySelector('button[type="submit"]');
+                if (submitButton && submitButton.disabled) {
+                    return;
                 }
 
-                var settledRotation = parseFloat(wheel.getAttribute('data-settled-rotation') || '0');
-                if (isNaN(settledRotation)) {
-                    settledRotation = 0;
-                }
-                wheel.style.setProperty('--spin-rotation', (settledRotation + 2880) + 'deg');
-                wheel.classList.add('is-spinning');
-                window.setTimeout(function () {
-                    form.dataset.submitting = '1';
-                    form.submit();
-                }, 4300);
+                form.dataset.spinning = '1';
+                wheel.classList.remove('has-result');
+                setSpinningState(true, true);
+                setLiveStatus('Đang quay... chờ bánh xe dừng để nhận kết quả.', true);
+
+                var formData = new FormData(form);
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                    .then(function (response) {
+                        return response.json().catch(function () {
+                            return { ok: false, message: 'Máy chủ trả về dữ liệu không hợp lệ.' };
+                        }).then(function (data) {
+                            if (!response.ok || !data.ok) {
+                                throw new Error(data.message || 'Không thể quay lúc này.');
+                            }
+                            return data;
+                        });
+                    })
+                    .then(function (data) {
+                        var result = data.result || {};
+                        var targetModulo = Number(result.target_rotation || 0);
+                        var turns = Number(result.turns || 8);
+                        var duration = baseDuration + Math.round(secureRandomUnit() * 700);
+                        var finalRotation = nextFinalRotation(targetModulo, turns);
+
+                        return animateToRotation(finalRotation, duration).then(function () {
+                            updateState(data.state);
+                            if (resultSlot) {
+                                resultSlot.innerHTML = resultHtml(result);
+                                var card = document.getElementById('spinResult');
+                                if (card) {
+                                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }
+                            }
+                            setLiveStatus(result.type === 'win' ? 'Đã cộng thưởng vào kho chờ rút.' : 'Bánh xe đã dừng.', false);
+                            return data;
+                        });
+                    })
+                    .then(function (data) {
+                        var remaining = Number((data.state || {}).luotquay || 0);
+                        setSpinningState(false, remaining > 0);
+                    })
+                    .catch(function (error) {
+                        showMessage(error.message || 'Không thể quay lúc này.', 'error');
+                        setLiveStatus('', false);
+                        var currentRemaining = remainingSpinsText ? Number(String(remainingSpinsText.textContent).replace(/\D/g, '')) : 0;
+                        setSpinningState(false, currentRemaining > 0);
+                    })
+                    .finally(function () {
+                        form.dataset.spinning = '0';
+                    });
             });
         })();
     </script>

@@ -7,8 +7,7 @@ require_once __DIR__ . '/../forum_data.php';
 include_once __DIR__ . '/account_info.php';
 
 const GOLD_ITEM_ID = 457;
-const GOLD_EXCHANGE_RATE = 10;
-const OLD_GOLD_EXCHANGE_RATE = 100;
+const GOLD_EXCHANGE_RATE = 3;
 const RECHARGE_THANKS_GIFTCODE = 'camonquykhach';
 
 $message = $_SESSION['gold_exchange_message'] ?? '';
@@ -105,19 +104,19 @@ function handle_gold_exchange_request($conn, $account_id, $player_id) {
     $amount = (int)($_POST['gold_amount'] ?? 0);
 
     if ($amount <= 0) {
-        throw new Exception('So thoi vang can doi phai lon hon 0.');
+        throw new Exception('Số thỏi vàng cần đổi phải lớn hơn 0.');
     }
 
     if ($amount > 1000000) {
-        throw new Exception('So thoi vang moi lan doi qua lon.');
+        throw new Exception('Số thỏi vàng mỗi lần đổi quá lớn.');
     }
 
     if ($account_id === null || $account_id <= 0) {
-        throw new Exception('Khong tim thay tai khoan.');
+        throw new Exception('Không tìm thấy tài khoản.');
     }
 
     if ($player_id === null || $player_id <= 0) {
-        throw new Exception('Ban chua co nhan vat trong game.');
+        throw new Exception('Bạn chưa có nhân vật trong game.');
     }
 
     $cost = $amount * GOLD_EXCHANGE_RATE;
@@ -126,7 +125,7 @@ function handle_gold_exchange_request($conn, $account_id, $player_id) {
     try {
         $stmt_account = $conn->prepare("SELECT vnd FROM account WHERE id = ? FOR UPDATE");
         if (!$stmt_account) {
-            throw new Exception('Loi prepare tai khoan: ' . $conn->error);
+            throw new Exception('Lỗi kiểm tra tài khoản: ' . $conn->error);
         }
         $stmt_account->bind_param("i", $account_id);
         $stmt_account->execute();
@@ -135,17 +134,17 @@ function handle_gold_exchange_request($conn, $account_id, $player_id) {
         $stmt_account->close();
 
         if (!$account) {
-            throw new Exception('Tai khoan khong ton tai.');
+            throw new Exception('Tài khoản không tồn tại.');
         }
 
         $current_balance = (int)$account['vnd'];
         if ($current_balance < $cost) {
-            throw new Exception('So du VND khong du. Ban can ' . number_format($cost, 0, ',', '.') . ' VND.');
+            throw new Exception('Số dư VND không đủ. Bạn cần ' . number_format($cost, 0, ',', '.') . ' VND.');
         }
 
         $stmt_player = $conn->prepare("SELECT items_bag FROM player WHERE id = ? AND account_id = ? FOR UPDATE");
         if (!$stmt_player) {
-            throw new Exception('Loi prepare nhan vat: ' . $conn->error);
+            throw new Exception('Lỗi kiểm tra nhân vật: ' . $conn->error);
         }
         $stmt_player->bind_param("ii", $player_id, $account_id);
         $stmt_player->execute();
@@ -154,7 +153,7 @@ function handle_gold_exchange_request($conn, $account_id, $player_id) {
         $stmt_player->close();
 
         if (!$player) {
-            throw new Exception('Nhan vat khong ton tai hoac khong thuoc tai khoan nay.');
+            throw new Exception('Nhân vật không tồn tại hoặc không thuộc tài khoản này.');
         }
 
         $items = decode_items_bag_for_exchange($player['items_bag'] ?? '[]');
@@ -162,34 +161,34 @@ function handle_gold_exchange_request($conn, $account_id, $player_id) {
         $new_items_bag = encode_items_bag_for_exchange($items);
 
         if ($new_items_bag === false || json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception('Khong the ma hoa tui do.');
+            throw new Exception('Không thể mã hóa túi đồ.');
         }
 
         $stmt_update_account = $conn->prepare("UPDATE account SET vnd = vnd - ? WHERE id = ?");
         if (!$stmt_update_account) {
-            throw new Exception('Loi prepare tru VND: ' . $conn->error);
+            throw new Exception('Lỗi trừ VND: ' . $conn->error);
         }
         $stmt_update_account->bind_param("ii", $cost, $account_id);
         if (!$stmt_update_account->execute() || $stmt_update_account->affected_rows === 0) {
             $stmt_update_account->close();
-            throw new Exception('Khong the tru VND khoi tai khoan.');
+            throw new Exception('Không thể trừ VND khỏi tài khoản.');
         }
         $stmt_update_account->close();
 
         $stmt_update_bag = $conn->prepare("UPDATE player SET items_bag = ? WHERE id = ? AND account_id = ?");
         if (!$stmt_update_bag) {
-            throw new Exception('Loi prepare cap nhat tui do: ' . $conn->error);
+            throw new Exception('Lỗi cập nhật túi đồ: ' . $conn->error);
         }
         $stmt_update_bag->bind_param("sii", $new_items_bag, $player_id, $account_id);
         if (!$stmt_update_bag->execute()) {
             $stmt_update_bag->close();
-            throw new Exception('Khong the cap nhat tui do.');
+            throw new Exception('Không thể cập nhật túi đồ.');
         }
         $stmt_update_bag->close();
 
         $conn->commit();
         $_SESSION['vnd'] = $current_balance - $cost;
-        return 'Doi thanh cong ' . number_format($amount, 0, ',', '.') . ' thoi vang.';
+        return 'Đổi thành công ' . number_format($amount, 0, ',', '.') . ' thỏi vàng.';
     } catch (Exception $e) {
         $conn->rollback();
         throw $e;
@@ -200,7 +199,7 @@ if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] 
     try {
         $posted_token = $_POST['csrf_token'] ?? '';
         if (!is_string($posted_token) || !hash_equals($csrf_token, $posted_token)) {
-            throw new Exception('Phien giao dich khong hop le, vui long tai lai trang.');
+            throw new Exception('Phiên giao dịch không hợp lệ, vui lòng tải lại trang.');
         }
 
         $success_message = handle_gold_exchange_request($conn, $account_id, $current_player_id);
@@ -218,7 +217,7 @@ if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Doi Thoi Vang - Chu Be Rong Online</title>
+    <title>Đổi Thỏi Vàng - Chú Bé Rồng Online</title>
     <link rel="icon" href="/images/favicon-48x48.ico" type="image/x-icon">
     <link rel="stylesheet" href="/view/static/css/template.css?v=1.10">
     <link rel="stylesheet" href="/view/static/css/w3.css?v=1.01">
@@ -226,123 +225,230 @@ if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] 
     <script src="/view/static/js/disable_devtools.js"></script>
     <style>
         .exchange-wrap {
-            max-width: 520px;
+            max-width: 560px;
             margin: 0 auto;
             color: #2d1600;
         }
+
         .exchange-panel {
-            background: #fff8ec;
-            border: 1px solid #f6b35d;
+            background: #fffaf0;
+            border: 1px solid #efc067;
             border-radius: 8px;
-            padding: 14px;
+            box-shadow: 0 10px 24px rgba(124, 45, 18, 0.12);
             margin: 10px;
-            text-align: center;
+            padding: 16px;
+            text-align: left;
         }
+
+        .exchange-heading {
+            border-bottom: 1px solid #f2d4a0;
+            margin-bottom: 14px;
+            padding-bottom: 12px;
+        }
+
         .exchange-panel h2 {
             color: #7c2d12;
-            font-size: 18px;
-            margin: 0 0 8px;
+            font-size: 20px;
+            margin: 0 0 4px;
         }
+
+        .exchange-intro {
+            color: #6b3a00;
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.45;
+            margin: 0;
+        }
+
         .balance-line {
-            font-weight: 800;
+            align-items: center;
+            background: #fff3d6;
+            border: 1px solid #f2c166;
+            border-radius: 8px;
             color: #7c2d12;
-            margin-bottom: 10px;
+            display: flex;
+            font-weight: 800;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding: 10px 12px;
         }
+
         .balance-line span {
-            color: #dc2626;
+            color: #b91c1c;
+            font-size: 16px;
         }
-        .rate-line {
+
+        .rate-box {
+            background: #fff;
+            border: 1px solid #f3d08a;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            padding: 13px 14px;
+        }
+
+        .rate-label {
+            color: #8a4b00;
+            font-size: 12px;
+            font-weight: 900;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .rate-value {
+            align-items: baseline;
+            color: #4a2a00;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            line-height: 1.2;
+        }
+
+        .rate-value strong {
+            color: #b45309;
+            font-size: 27px;
+            font-weight: 900;
+        }
+
+        .rate-example {
             color: #6b3a00;
             font-size: 12px;
-            margin-bottom: 12px;
+            font-weight: 700;
+            margin-top: 7px;
         }
-        .promo-rate-line {
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            border-radius: 7px;
-            color: #92400e;
-            font-size: 13px;
-            font-weight: 900;
-            margin: 0 0 8px;
-            padding: 8px;
-            text-align: center;
+
+        .sync-note {
+            background: #eef8f1;
+            border: 1px solid #a7d9b8;
+            border-radius: 8px;
+            color: #166534;
+            font-size: 12px;
+            font-weight: 800;
+            line-height: 1.45;
+            margin: 0 0 12px;
+            padding: 10px 12px;
         }
+
         .giftcode-notice {
-            background: #fff1c7;
-            border: 1px solid #f59e0b;
-            border-radius: 7px;
+            background: #fff6df;
+            border: 1px solid #f0c36b;
+            border-radius: 8px;
             color: #713f12;
             font-size: 12px;
             font-weight: 700;
             line-height: 1.5;
             margin: 0 0 12px;
-            padding: 10px;
-            text-align: left;
+            padding: 10px 12px;
         }
+
         .giftcode-notice .giftcode-value {
             background: #7c2d12;
-            border-radius: 5px;
+            border-radius: 6px;
             color: #fff7ed;
             display: inline-block;
             font-size: 13px;
+            font-weight: 900;
             letter-spacing: 0;
             margin: 2px 0;
-            padding: 2px 7px;
+            padding: 2px 8px;
         }
+
         .exchange-form {
             display: grid;
             gap: 10px;
-            text-align: left;
         }
+
         .exchange-form label {
-            font-weight: 800;
             color: #7c2d12;
+            font-weight: 900;
         }
+
         .exchange-form input[type="number"] {
-            width: 100%;
-            box-sizing: border-box;
-            border: 1px solid #f0c27b;
-            border-radius: 6px;
-            padding: 9px;
             background: #fff;
+            border: 1px solid #e7b869;
+            border-radius: 8px;
+            box-sizing: border-box;
             color: #111827;
+            font-size: 15px;
+            padding: 10px 11px;
+            width: 100%;
         }
+
+        .exchange-form input[type="number"]:focus {
+            border-color: #d97706;
+            box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.18);
+            outline: none;
+        }
+
         .exchange-submit {
+            background: #d97706;
             border: 0;
-            border-radius: 6px;
-            background: #f97316;
+            border-radius: 8px;
             color: #fff;
-            font-weight: 800;
-            padding: 10px;
             cursor: pointer;
+            font-weight: 900;
+            padding: 11px 12px;
+            transition: background-color 0.2s ease, transform 0.2s ease;
         }
+
+        .exchange-submit:hover {
+            background: #b45309;
+            transform: translateY(-1px);
+        }
+
         .message {
-            border-radius: 6px;
-            padding: 9px;
-            margin-bottom: 10px;
+            border-radius: 8px;
             font-weight: 800;
+            line-height: 1.45;
+            margin-bottom: 12px;
+            padding: 10px 12px;
         }
+
         .message.success {
             background: #dcfce7;
-            color: #166534;
             border: 1px solid #86efac;
+            color: #166534;
         }
+
         .message.error {
             background: #fee2e2;
-            color: #991b1b;
             border: 1px solid #fca5a5;
+            color: #991b1b;
         }
+
         .quick-links {
             display: flex;
-            justify-content: center;
-            gap: 12px;
             flex-wrap: wrap;
-            margin-top: 12px;
             font-size: 12px;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 12px;
         }
+
         .quick-links a {
-            color: #b45309;
-            font-weight: 800;
+            color: #9a3412;
+            font-weight: 900;
+            text-decoration: none;
+        }
+
+        .quick-links a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 480px) {
+            .exchange-panel {
+                margin: 8px;
+                padding: 13px;
+            }
+
+            .balance-line {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 2px;
+            }
+
+            .rate-value strong {
+                font-size: 24px;
+            }
         }
     </style>
 </head>
@@ -358,8 +464,8 @@ if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] 
                         <div class="menu2" style="background: #561d00;">
                             <table width="100%" border="0" cellspacing="4">
                                 <tr class="menu">
-                                    <td><a href="/">Trang Chu</a></td>
-                                    <td><a href="/forum.php">Dien Dan</a></td>
+                                    <td><a href="/">Trang Chủ</a></td>
+                                    <td><a href="/forum.php">Diễn Đàn</a></td>
                                 </tr>
                             </table>
                         </div>
@@ -367,11 +473,14 @@ if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] 
                         <div class="body">
                             <div class="exchange-wrap">
                                 <div class="exchange-panel">
-                                    <h2>Doi Thoi Vang</h2>
+                                    <div class="exchange-heading">
+                                        <h2>Đổi thỏi vàng</h2>
+                                        <p class="exchange-intro">Tỉ lệ mới đã được cập nhật. Nhập số lượng thỏi vàng muốn nhận, hệ thống sẽ tự trừ VND theo tỉ lệ bên dưới.</p>
+                                    </div>
 
                                     <?php if (!$is_logged_in): ?>
-                                        <div class="message error">Ban can dang nhap de doi thoi vang.</div>
-                                        <div class="quick-links"><a href="/app/login.php">Dang nhap</a></div>
+                                        <div class="message error">Bạn cần đăng nhập để đổi thỏi vàng.</div>
+                                        <div class="quick-links"><a href="/app/login.php">Đăng nhập</a></div>
                                     <?php else: ?>
                                         <?php if ($message !== ''): ?>
                                             <div class="message <?php echo htmlspecialchars($message_type); ?>">
@@ -380,19 +489,26 @@ if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] 
                                         <?php endif; ?>
 
                                         <div class="balance-line">
-                                            So du: <span><?php echo number_format((int)$user_balance, 0, ',', '.'); ?></span> VND
+                                            <strong>Số dư tài khoản</strong>
+                                            <span><?php echo number_format((int)$user_balance, 0, ',', '.'); ?> VND</span>
                                         </div>
-                                        <div class="promo-rate-line">
-                                            X2 n&#7841;p t&iacute;ch l&#361;y m&#7915;ng sinh nh&#7853;t Messi
+                                        <div class="rate-box">
+                                            <div class="rate-label">Tỉ lệ đổi hiện tại</div>
+                                            <div class="rate-value">
+                                                <strong><?php echo number_format(GOLD_EXCHANGE_RATE, 0, ',', '.'); ?> VND</strong>
+                                                <span>= 1 thỏi vàng</span>
+                                            </div>
+                                            <div class="rate-example">
+                                                Ví dụ: đổi 10 thỏi vàng cần <?php echo number_format(10 * GOLD_EXCHANGE_RATE, 0, ',', '.'); ?> VND.
+                                            </div>
                                         </div>
-                                        <div class="rate-line">
-                                            T&#7881; l&#7879; m&#7899;i: <?php echo number_format(GOLD_EXCHANGE_RATE, 0, ',', '.'); ?> VND = 1 TV. Gi&aacute; c&#361;: <?php echo number_format(OLD_GOLD_EXCHANGE_RATE, 0, ',', '.'); ?> VND = 1 TV.<br>
-                                            Thoat game truoc khi doi de tranh mat dong bo tui do.
+                                        <div class="sync-note">
+                                            Vui lòng thoát game trước khi đổi để túi đồ đồng bộ chính xác.
                                         </div>
                                         <?php if ((int)$user_total_recharge > 0): ?>
                                             <div class="giftcode-notice">
-                                                Giftcode tri &acirc;n: <span class="giftcode-value"><?php echo htmlspecialchars(RECHARGE_THANKS_GIFTCODE); ?></span><br>
-                                                Lượt nhập to&agrave;n server chỉ 5 lần, n&ecirc;n qu&yacute; kh&aacute;ch vui l&ograve;ng chỉ nhập 1 lần cho nick đ&atilde; nạp t&iacute;ch lũy. Mọi trường hợp gian lận sẽ bị xử phạt.
+                                                Giftcode tri ân: <span class="giftcode-value"><?php echo htmlspecialchars(RECHARGE_THANKS_GIFTCODE); ?></span><br>
+                                                Lượt nhập toàn server chỉ 5 lần. Vui lòng chỉ nhập 1 lần cho tài khoản đã nạp tích lũy. Mọi trường hợp gian lận sẽ bị xử lý.
                                             </div>
                                         <?php endif; ?>
 
@@ -400,16 +516,16 @@ if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] 
                                             <input type="hidden" name="action" value="exchange_gold">
                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
 
-                                            <label for="gold_amount">So thoi vang muon doi</label>
-                                            <input id="gold_amount" name="gold_amount" type="number" min="1" step="1" required>
+                                            <label for="gold_amount">Số thỏi vàng muốn đổi</label>
+                                            <input id="gold_amount" name="gold_amount" type="number" min="1" step="1" placeholder="Ví dụ: 10" required>
 
-                                            <button class="exchange-submit" type="submit">Doi Thoi Vang</button>
+                                            <button class="exchange-submit" type="submit">Đổi thỏi vàng</button>
                                         </form>
 
                                         <div class="quick-links">
-                                            <a href="/app/nap-ngoc.php">Nap Tien</a>
-                                            <a href="/app/vong-quay.php">Vòng Quay</a>
-                                            <a href="/forum.php">Ve dien dan</a>
+                                            <a href="/app/nap-ngoc.php">Nạp tiền</a>
+                                            <a href="/app/vong-quay.php">Vòng quay</a>
+                                            <a href="/forum.php">Về diễn đàn</a>
                                         </div>
                                     <?php endif; ?>
                                 </div>
