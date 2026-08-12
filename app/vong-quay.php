@@ -1,4 +1,34 @@
 <?php
+$__lucky_ajax_bootstrap = (
+    strtolower((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest'
+    || strpos(strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? '')), 'application/json') !== false
+);
+$__lucky_ajax_response_sent = false;
+
+if ($__lucky_ajax_bootstrap) {
+    ob_start();
+    ini_set('display_errors', '0');
+    ini_set('display_startup_errors', '0');
+    register_shutdown_function(function () use (&$__lucky_ajax_response_sent) {
+        $error = error_get_last();
+        if (
+            $error
+            && !$__lucky_ajax_response_sent
+            && in_array((int)$error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)
+        ) {
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'ok' => false,
+                'message' => 'Máy chủ lỗi khi xử lý vòng quay. Vui lòng thử lại hoặc báo admin kiểm tra log.',
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+    });
+}
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -6,6 +36,11 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../forum_data.php';
 include_once __DIR__ . '/account_info.php';
 require_once __DIR__ . '/../lucky_rewards.php';
+
+if ($__lucky_ajax_bootstrap) {
+    ini_set('display_errors', '0');
+    ini_set('display_startup_errors', '0');
+}
 
 const LUCKY_GOLD_ITEM_ID = 457;
 const CHECKIN_SPIN_REWARD = 1;
@@ -158,9 +193,28 @@ function lucky_is_ajax_request() {
 }
 
 function lucky_json_response($payload, $status_code = 200) {
+    global $__lucky_ajax_response_sent;
+
+    $__lucky_ajax_response_sent = true;
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+
+    $json_flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+    if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
+        $json_flags |= JSON_INVALID_UTF8_SUBSTITUTE;
+    }
+    $json = json_encode($payload, $json_flags);
+    if ($json === false) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        echo '{"ok":false,"message":"Không thể mã hóa dữ liệu vòng quay."}';
+        exit();
+    }
+
     http_response_code($status_code);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    echo $json;
     exit();
 }
 
@@ -643,6 +697,14 @@ $wheel_config = [
     'segments' => lucky_segment_json($wheel_segments),
     'spinDurationMs' => 6200,
 ];
+$wheel_config_json_flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT;
+if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
+    $wheel_config_json_flags |= JSON_INVALID_UTF8_SUBSTITUTE;
+}
+$wheel_config_json = json_encode($wheel_config, $wheel_config_json_flags);
+if ($wheel_config_json === false) {
+    $wheel_config_json = '{"segments":[],"spinDurationMs":6200}';
+}
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -1241,7 +1303,7 @@ $wheel_config = [
     </div>
 
     <script>
-        window.luckyWheelConfig = <?php echo json_encode($wheel_config, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+        window.luckyWheelConfig = <?php echo $wheel_config_json; ?>;
     </script>
     <script>
         (function () {
@@ -1482,9 +1544,24 @@ $wheel_config = [
                     }
                 })
                     .then(function (response) {
-                        return response.json().catch(function () {
-                            return { ok: false, message: 'Máy chủ trả về dữ liệu không hợp lệ.' };
-                        }).then(function (data) {
+                        return response.text().then(function (text) {
+                            var data;
+                            try {
+                                data = text ? JSON.parse(text) : {};
+                            } catch (error) {
+                                var cleanText = text
+                                    .replace(/<br\s*\/?>/gi, '\n')
+                                    .replace(/<[^>]*>/g, ' ')
+                                    .replace(/\s+/g, ' ')
+                                    .trim();
+                                data = {
+                                    ok: false,
+                                    message: cleanText
+                                        ? cleanText.slice(0, 220)
+                                        : 'Máy chủ trả về dữ liệu trống.'
+                                };
+                            }
+
                             if (!response.ok || !data.ok) {
                                 throw new Error(data.message || 'Không thể quay lúc này.');
                             }
