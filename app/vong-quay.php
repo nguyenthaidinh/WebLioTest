@@ -2,6 +2,8 @@
 $__lucky_ajax_bootstrap = (
     strtolower((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest'
     || strpos(strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? '')), 'application/json') !== false
+    || (isset($_POST['ajax']) && (string)$_POST['ajax'] === '1')
+    || (isset($_GET['ajax']) && (string)$_GET['ajax'] === '1')
 );
 $__lucky_ajax_response_sent = false;
 
@@ -189,7 +191,10 @@ function lucky_is_ajax_request() {
     $requested_with = strtolower((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''));
     $accept = strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? ''));
 
-    return $requested_with === 'xmlhttprequest' || strpos($accept, 'application/json') !== false;
+    return $requested_with === 'xmlhttprequest'
+        || strpos($accept, 'application/json') !== false
+        || (isset($_POST['ajax']) && (string)$_POST['ajax'] === '1')
+        || (isset($_GET['ajax']) && (string)$_GET['ajax'] === '1');
 }
 
 function lucky_json_response($payload, $status_code = 200) {
@@ -1534,7 +1539,8 @@ if ($wheel_config_json === false) {
                 setLiveStatus('Đang quay... chờ bánh xe dừng để nhận kết quả.', true);
 
                 var formData = new FormData(form);
-                fetch(form.action, {
+                formData.set('ajax', '1');
+                fetch('/app/vong-quay.php?ajax=1', {
                     method: 'POST',
                     body: formData,
                     credentials: 'same-origin',
@@ -1549,16 +1555,19 @@ if ($wheel_config_json === false) {
                             try {
                                 data = text ? JSON.parse(text) : {};
                             } catch (error) {
-                                var cleanText = text
-                                    .replace(/<br\s*\/?>/gi, '\n')
-                                    .replace(/<[^>]*>/g, ' ')
-                                    .replace(/\s+/g, ' ')
-                                    .trim();
+                                var looksLikeHtml = /<!doctype|<html|<head|<body|<style|@import/i.test(text || '');
+                                var cleanText = looksLikeHtml
+                                    ? ''
+                                    : text
+                                        .replace(/<br\s*\/?>/gi, '\n')
+                                        .replace(/<[^>]*>/g, ' ')
+                                        .replace(/\s+/g, ' ')
+                                        .trim();
                                 data = {
                                     ok: false,
                                     message: cleanText
                                         ? cleanText.slice(0, 220)
-                                        : 'Máy chủ trả về dữ liệu trống.'
+                                        : 'Máy chủ đang trả về trang HTML thay vì kết quả quay. Vui lòng tải lại trang rồi thử lại.'
                                 };
                             }
 
