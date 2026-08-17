@@ -19,7 +19,7 @@ $credit_history_ready = false;
 try {
     $credit_history_ready = recharge_ensure_credit_history_table($conn);
 } catch (Throwable $e) {
-    error_log('Khong the khoi tao bang recharge_credit_history: ' . $e->getMessage());
+    error_log('Không thể khởi tạo bảng recharge_credit_history: ' . $e->getMessage());
 }
 
 if (!$credit_history_ready) {
@@ -29,18 +29,18 @@ if (!$credit_history_ready) {
 function admin_recharge_status_label($status, $is_credited = 0) {
     $status = strtolower((string)$status);
     if ($is_credited || $status === 'success') {
-        return ['Da duyet', 'success'];
+        return ['Đã duyệt', 'success'];
     }
     if ($status === 'pending') {
-        return ['Cho duyet', 'pending'];
+        return ['Chờ duyệt', 'pending'];
     }
     if ($status === 'rejected') {
-        return ['Tu choi', 'rejected'];
+        return ['Từ chối', 'rejected'];
     }
     if ($status === 'failed') {
-        return ['That bai', 'rejected'];
+        return ['Thất bại', 'rejected'];
     }
-    return ['Khac', 'unknown'];
+    return ['Khác', 'unknown'];
 }
 
 function admin_set_alert($message, $type = 'success') {
@@ -51,31 +51,31 @@ function admin_set_alert($message, $type = 'success') {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $credit_history_ready) {
     $posted_token = $_POST['csrf_token'] ?? '';
     if (!hash_equals($csrf_token, $posted_token)) {
-        $_alert = admin_set_alert('Phien bao mat khong hop le.', 'error');
+        $_alert = admin_set_alert('Phiên bảo mật không hợp lệ.', 'error');
     } else {
         $request_id = (int)($_POST['request_id'] ?? 0);
         $action = $_POST['action'] ?? '';
 
         if ($request_id <= 0 || !in_array($action, ['approve', 'reject'], true)) {
-            $_alert = admin_set_alert('Yeu cau khong hop le.', 'error');
+            $_alert = admin_set_alert('Yêu cầu không hợp lệ.', 'error');
         } elseif ($action === 'reject') {
             $stmt = $conn->prepare("UPDATE bank_transfers SET status = 'rejected' WHERE id = ? AND is_credited = 0");
             if ($stmt) {
                 $stmt->bind_param("i", $request_id);
                 $stmt->execute();
                 $_alert = $stmt->affected_rows > 0
-                    ? admin_set_alert('Da tu choi yeu cau nap tien.')
-                    : admin_set_alert('Khong the tu choi yeu cau nay.', 'error');
+                    ? admin_set_alert('Đã từ chối yêu cầu nạp tiền.')
+                    : admin_set_alert('Không thể từ chối yêu cầu này.', 'error');
                 $stmt->close();
             } else {
-                $_alert = admin_set_alert('Loi prepare tu choi: ' . $conn->error, 'error');
+                $_alert = admin_set_alert('Lỗi prepare từ chối: ' . $conn->error, 'error');
             }
         } elseif ($action === 'approve') {
             $conn->begin_transaction();
             try {
                 $stmt = $conn->prepare("SELECT username, amount, status, is_credited FROM bank_transfers WHERE id = ? FOR UPDATE");
                 if (!$stmt) {
-                    throw new Exception('Loi prepare lay yeu cau: ' . $conn->error);
+                    throw new Exception('Lỗi prepare lấy yêu cầu: ' . $conn->error);
                 }
                 $stmt->bind_param("i", $request_id);
                 $stmt->execute();
@@ -84,10 +84,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $credit_history_ready) {
                 $stmt->close();
 
                 if (!$request) {
-                    throw new Exception('Khong tim thay yeu cau nap tien.');
+                    throw new Exception('Không tìm thấy yêu cầu nạp tiền.');
                 }
                 if ((int)$request['is_credited'] === 1 || strtolower((string)$request['status']) === 'success') {
-                    throw new Exception('Yeu cau nay da duoc duyet truoc do.');
+                    throw new Exception('Yêu cầu này đã được duyệt trước đó.');
                 }
 
                 $amount = (int)$request['amount'];
@@ -100,11 +100,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $credit_history_ready) {
                 $default_bonus_spins = recharge_default_bonus_spins($amount);
                 $posted_bonus_spins = $_POST['bonus_spins'] ?? $default_bonus_spins;
                 if (is_array($posted_bonus_spins)) {
-                    throw new Exception('So luot quay khong hop le.');
+                    throw new Exception('Số lượt quay không hợp lệ.');
                 }
                 $bonus_spins = filter_var($posted_bonus_spins, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
                 if ($bonus_spins === false || $bonus_spins > 1000000) {
-                    throw new Exception('So luot quay phai la so nguyen tu 0 den 1.000.000.');
+                    throw new Exception('Số lượt quay phải là số nguyên từ 0 đến 1.000.000.');
                 }
 
                 $bonus_rate = recharge_bonus_rate($amount);
@@ -113,12 +113,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $credit_history_ready) {
 
                 $stmt_update_account = $conn->prepare("UPDATE account SET vnd = vnd + ?, tongnap = tongnap + ?, luotquay = luotquay + ? WHERE username = ?");
                 if (!$stmt_update_account) {
-                    throw new Exception('Loi prepare cong tien: ' . $conn->error);
+                    throw new Exception('Lỗi prepare cộng tiền: ' . $conn->error);
                 }
                 $stmt_update_account->bind_param("iiis", $credit_amount, $total_recharge_increment, $bonus_spins, $username);
                 $stmt_update_account->execute();
                 if ($stmt_update_account->affected_rows === 0) {
-                    throw new Exception('Khong tim thay tai khoan de cong tien.');
+                    throw new Exception('Không tìm thấy tài khoản để cộng tiền.');
                 }
                 $stmt_update_account->close();
 
@@ -152,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $credit_history_ready) {
 
                 $stmt_update_request = $conn->prepare("UPDATE bank_transfers SET status = 'success', is_credited = 1 WHERE id = ? AND is_credited = 0");
                 if (!$stmt_update_request) {
-                    throw new Exception('Loi prepare cap nhat yeu cau: ' . $conn->error);
+                    throw new Exception('Lỗi prepare cập nhật yêu cầu: ' . $conn->error);
                 }
                 $stmt_update_request->bind_param("i", $request_id);
                 $stmt_update_request->execute();
@@ -247,7 +247,7 @@ $requests = $conn->query("
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Duyệt Nạp Tiền - Admin</title>
+    <title>Duyệt - Admin</title>
     <link href="../assets/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="../assets/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
     <script src="../assets/jquery/jquery.min.js"></script>
@@ -299,7 +299,7 @@ $requests = $conn->query("
     </div>
 
     <div class="container" style="max-width: 1180px;">
-        <h1 class="page-title">Duyệt Nạp Tiền</h1>
+        <h1 class="page-title">Duyệt</h1>
         <p class="page-subtitle">Sự kiện x2: số dư được nhân đôi trước, sau đó khuyến mãi tiếp tục tính trên giá trị đã nhân đôi.</p>
 
         <?php echo $_alert; ?>
@@ -374,12 +374,12 @@ $requests = $conn->query("
                                 <td style="max-width:320px;word-break:break-word;"><?php echo htmlspecialchars($request['description'] ?: $request['transaction_id']); ?></td>
                                 <td>
                                     <?php if ($credit_history_ready && (int)$request['is_credited'] === 0 && strtolower((string)$request['status']) !== 'success') : ?>
-                                        <form method="post" style="display:inline;" onsubmit="return confirm(<?php echo htmlspecialchars(json_encode('Duyệt nạp ' . number_format($request_amount, 0, ',', '.') . ' VND: sau x2 và khuyến mãi sẽ cộng tổng ' . number_format($credit_amount, 0, ',', '.') . ' VND cho ' . $request['username'] . '?', JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>);">
+                                        <form method="post" style="display:inline;" onsubmit="return confirm(<?php echo htmlspecialchars(json_encode('Duyệt ' . number_format($request_amount, 0, ',', '.') . ' VND: sau x2 và khuyến mãi sẽ cộng tổng ' . number_format($credit_amount, 0, ',', '.') . ' VND cho ' . $request['username'] . '?', JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>);">
                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                             <input type="hidden" name="request_id" value="<?php echo (int)$request['id']; ?>">
                                             <input type="hidden" name="action" value="approve">
-                                            <input class="bonus-spin-input" type="number" name="bonus_spins" min="0" step="1" value="<?php echo $default_bonus_spins; ?>" title="Luot quay cong them">
-                                            <span class="spin-unit">luot</span>
+                                            <input class="bonus-spin-input" type="number" name="bonus_spins" min="0" step="1" value="<?php echo $default_bonus_spins; ?>" title="Lượt quay cộng thêm">
+                                            <span class="spin-unit">lượt</span>
                                             <button type="submit" class="btn-action btn-approve">Duyệt</button>
                                         </form>
                                         <?php if (strtolower((string)$request['status']) !== 'rejected') : ?>

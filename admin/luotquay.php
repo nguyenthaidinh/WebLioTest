@@ -26,14 +26,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $posted_token = $_POST['csrf_token'] ?? '';
         if (!is_string($posted_token) || !hash_equals($csrf_token, $posted_token)) {
-            throw new Exception('Phien bao mat khong hop le.');
+            throw new Exception('Phiên bảo mật không hợp lệ.');
         }
 
         $username_raw = $_POST['username'] ?? '';
         $spin_amount_raw = $_POST['spin_amount'] ?? '';
 
         if (!is_string($username_raw)) {
-            throw new Exception('Tai khoan khong hop le.');
+            throw new Exception('Tài khoản không hợp lệ.');
         }
 
         $username = trim($username_raw);
@@ -41,12 +41,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception('Vui long nhap tai khoan.');
         }
         if (is_array($spin_amount_raw)) {
-            throw new Exception('So luot quay khong hop le.');
+            throw new Exception('Số lượt quay không hợp lệ.');
         }
 
         $spin_amount = filter_var($spin_amount_raw, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         if ($spin_amount === false || $spin_amount > 1000000) {
-            throw new Exception('So luot quay phai la so nguyen tu 1 den 1.000.000.');
+            throw new Exception('Số lượt quay phải là số nguyên từ 1 đến 1.000.000.');
         }
 
         $conn->begin_transaction();
@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stmt_account = $conn->prepare("SELECT id, username, luotquay FROM account WHERE username = ? FOR UPDATE");
         if (!$stmt_account) {
-            throw new Exception('Loi prepare tai khoan: ' . $conn->error);
+            throw new Exception('Lỗi prepare tài khoản: ' . $conn->error);
         }
         $stmt_account->bind_param("s", $username);
         $stmt_account->execute();
@@ -63,24 +63,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt_account->close();
 
         if (!$account) {
-            throw new Exception('Khong tim thay tai khoan.');
+            throw new Exception('Không tìm thấy tài khoản.');
         }
 
         $stmt_update = $conn->prepare("UPDATE account SET luotquay = luotquay + ? WHERE id = ?");
         if (!$stmt_update) {
-            throw new Exception('Loi prepare cong luot quay: ' . $conn->error);
+            throw new Exception('Lỗi prepare cộng lượt quay: ' . $conn->error);
         }
         $account_id = (int)$account['id'];
         $stmt_update->bind_param("ii", $spin_amount, $account_id);
         if (!$stmt_update->execute() || $stmt_update->affected_rows === 0) {
             $stmt_update->close();
-            throw new Exception('Khong the cong luot quay.');
+            throw new Exception('Không thể cộng lượt quay.');
         }
         $stmt_update->close();
 
         $conn->commit();
         $new_total = (int)$account['luotquay'] + $spin_amount;
-        $_alert = spin_admin_alert('Da cong ' . number_format($spin_amount, 0, ',', '.') . ' luot quay cho ' . $account['username'] . '. Tong moi: ' . number_format($new_total, 0, ',', '.') . '.');
+        $_alert = spin_admin_alert('Đã cộng ' . number_format($spin_amount, 0, ',', '.') . ' lượt quay cho ' . $account['username'] . '. Tổng mới: ' . number_format($new_total, 0, ',', '.') . '.');
         $prefill_username = $account['username'];
     } catch (Exception $e) {
         if ($transaction_started) {
@@ -114,7 +114,7 @@ $accounts = $conn->query("
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Cap Luot Quay - Admin</title>
+    <title>Cấp Lượt Quay - Admin</title>
     <link href="../assets/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="../assets/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
     <script src="../assets/jquery/jquery.min.js"></script>
@@ -153,15 +153,15 @@ $accounts = $conn->query("
 <body>
     <div class="admin-header">
         <div class="container">
-            <a href="/admin"><i class="fas fa-arrow-left"></i> Ve menu admin</a>
-            <a href="/admin/nap.php"><i class="fas fa-money-bill"></i> Duyet nap tien</a>
-            <a href="/admin/tyle-vongquay.php"><i class="fas fa-percentage"></i> Chinh ti le quay</a>
+            <a href="/admin"><i class="fas fa-arrow-left"></i> Về menu admin</a>
+            <a href="/admin/nap.php"><i class="fas fa-money-bill"></i> Duyệt</a>
+            <a href="/admin/tyle-vongquay.php"><i class="fas fa-percentage"></i> Vòng quay</a>
         </div>
     </div>
 
     <div class="container" style="max-width: 980px;">
-        <h1 class="page-title">Cap Luot Quay</h1>
-        <p class="page-subtitle">Cong luot quay thu cong cho tai khoan nguoi choi.</p>
+        <h1 class="page-title">Cấp Lượt Quay</h1>
+        <p class="page-subtitle">Cộng lượt quay thủ công cho tài khoản người chơi.</p>
 
         <?php echo $_alert; ?>
 
@@ -169,22 +169,22 @@ $accounts = $conn->query("
             <form method="post" class="form-grid">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                 <div>
-                    <label class="form-label" for="username">Tai khoan</label>
-                    <input id="username" class="form-control" type="text" name="username" value="<?php echo htmlspecialchars($prefill_username); ?>" placeholder="Nhap username" required>
+                    <label class="form-label" for="username">Tài khoản</label>
+                    <input id="username" class="form-control" type="text" name="username" value="<?php echo htmlspecialchars($prefill_username); ?>" placeholder="Nhập username" required>
                 </div>
                 <div>
-                    <label class="form-label" for="spin_amount">So luot cong</label>
+                    <label class="form-label" for="spin_amount">Số lượt cộng</label>
                     <input id="spin_amount" class="form-control" type="number" name="spin_amount" min="1" step="1" value="1" required>
                 </div>
-                <button class="btn-main-action" type="submit">Cong luot quay</button>
+                <button class="btn-main-action" type="submit">Cộng lượt quay</button>
             </form>
         </div>
 
         <div class="gc-card">
             <form method="get" class="d-flex" style="gap:10px; margin-bottom:14px;">
-                <input class="form-control" type="text" name="q" value="<?php echo htmlspecialchars($search); ?>" placeholder="Tim username hoac ten nhan vat..." style="flex:1;">
-                <button class="btn-search" type="submit">Tim</button>
-                <?php if ($search !== ''): ?><a class="btn-search" href="/admin/luotquay.php">Xoa</a><?php endif; ?>
+                <input class="form-control" type="text" name="q" value="<?php echo htmlspecialchars($search); ?>" placeholder="Tìm username hoặc tên nhân vật..." style="flex:1;">
+                <button class="btn-search" type="submit">Tìm</button>
+                <?php if ($search !== ''): ?><a class="btn-search" href="/admin/luotquay.php">Xóa</a><?php endif; ?>
             </form>
 
             <?php if ($accounts && $accounts->num_rows > 0): ?>
@@ -192,12 +192,12 @@ $accounts = $conn->query("
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Tai khoan</th>
-                            <th>Nhan vat</th>
-                            <th>Luot quay</th>
+                            <th>Tài khoản</th>
+                            <th>Nhân vật</th>
+                            <th>Lượt quay</th>
                             <th>TV cho rut</th>
                             <th>VND</th>
-                            <th>Chon</th>
+                            <th>Chọn</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -209,13 +209,13 @@ $accounts = $conn->query("
                                 <td style="color:#febb12;font-weight:800;"><?php echo number_format((int)$account['luotquay'], 0, ',', '.'); ?></td>
                                 <td><?php echo number_format((int)$account['thoi_vang'], 0, ',', '.'); ?></td>
                                 <td style="color:#4ade80;"><?php echo number_format((int)$account['vnd'], 0, ',', '.'); ?></td>
-                                <td><a class="quick-fill" href="/admin/luotquay.php?username=<?php echo urlencode($account['username']); ?>">Chon</a></td>
+                                <td><a class="quick-fill" href="/admin/luotquay.php?username=<?php echo urlencode($account['username']); ?>">Chọn</a></td>
                             </tr>
                         <?php endwhile; ?>
                     </tbody>
                 </table>
             <?php else: ?>
-                <div style="text-align:center;color:#9ca3af;padding:24px;">Khong tim thay tai khoan.</div>
+                <div style="text-align:center;color:#9ca3af;padding:24px;">Không tìm thấy tài khoản.</div>
             <?php endif; ?>
         </div>
     </div>

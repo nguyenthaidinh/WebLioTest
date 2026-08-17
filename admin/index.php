@@ -34,19 +34,19 @@ $today_gold_spends = admin_count_query($conn, "SELECT COUNT(*) FROM gold_bar_spe
 $admin_name = $_username ?? 'admin';
 $quick_items = [
     [
-        'title' => 'Duyet nap',
-        'desc' => 'Xu ly cac giao dich nap tien dang cho.',
+        'title' => 'Duyệt',
+        'desc' => 'Xử lý các giao dịch nạp tiền đang chờ.',
         'href' => '/admin/nap.php',
         'icon' => 'fas fa-wallet',
-        'meta' => $pending_recharges . ' cho duyet',
+        'meta' => $pending_recharges . ' chờ duyệt',
         'priority' => true,
     ],
     [
-        'title' => 'LSGD game',
-        'desc' => 'Xem lich su giao dich doi do trong game.',
+        'title' => 'Lịch sử GD game',
+        'desc' => 'Xem lịch sử giao dịch đổi đồ trong game.',
         'href' => '/admin/lsgd.php',
         'icon' => 'fas fa-history',
-        'meta' => $today_trades . ' hom nay',
+        'meta' => $today_trades . ' hôm nay',
         'priority' => false,
     ],
     [
@@ -58,56 +58,56 @@ $quick_items = [
         'priority' => false,
     ],
     [
-        'title' => 'Nguoi dung',
-        'desc' => 'Tra cuu tai khoan, so du va trang thai user.',
+        'title' => 'Người dùng',
+        'desc' => 'Tra cứu tài khoản, số dư và trạng thái người dùng.',
         'href' => '/admin/users.php',
         'icon' => 'fas fa-users',
-        'meta' => number_format($total_accounts) . ' tai khoan',
+        'meta' => number_format($total_accounts, 0, ',', '.') . ' tài khoản',
         'priority' => false,
     ],
     [
-        'title' => 'Nhan vat',
-        'desc' => 'Xem va sua thong tin nhan vat.',
+        'title' => 'Nhân vật',
+        'desc' => 'Xem và sửa thông tin nhân vật.',
         'href' => '/admin/players.php',
         'icon' => 'fas fa-user',
-        'meta' => number_format($total_players) . ' nhan vat',
+        'meta' => number_format($total_players, 0, ',', '.') . ' nhân vật',
         'priority' => false,
     ],
     [
-        'title' => 'Buff vat pham',
-        'desc' => 'Them vat pham vao hanh trang nguoi choi.',
+        'title' => 'Buff vật phẩm',
+        'desc' => 'Thêm vật phẩm vào hành trang người chơi.',
         'href' => '/admin/vatpham.php',
         'icon' => 'fas fa-box',
         'meta' => 'Item',
         'priority' => false,
     ],
     [
-        'title' => 'Cong chi so',
-        'desc' => 'Chinh suc manh, tiem nang, HP, KI.',
+        'title' => 'Cộng chỉ số',
+        'desc' => 'Chỉnh sức mạnh, tiềm năng, HP, KI.',
         'href' => '/admin/chiso.php',
         'icon' => 'fas fa-chart-line',
-        'meta' => 'Chi so',
+        'meta' => 'Chỉ số',
         'priority' => false,
     ],
     [
-        'title' => 'Luot quay',
-        'desc' => 'Quan ly luot quay va qua vong quay.',
+        'title' => 'Lượt quay',
+        'desc' => 'Quản lý lượt quay và quà vòng quay.',
         'href' => '/admin/luotquay.php',
         'icon' => 'fas fa-sync-alt',
-        'meta' => 'Vong quay',
+        'meta' => 'Vòng quay',
         'priority' => false,
     ],
     [
-        'title' => 'Ti le quay',
-        'desc' => 'Cau hinh ti le phan thuong vong quay.',
+        'title' => 'Vòng quay',
+        'desc' => 'Cấu hình phần thưởng vòng quay.',
         'href' => '/admin/tyle-vongquay.php',
         'icon' => 'fas fa-sliders-h',
-        'meta' => 'Cau hinh',
+        'meta' => 'Cấu hình',
         'priority' => false,
     ],
     [
         'title' => 'Gift code',
-        'desc' => 'Tao va quan ly giftcode cho nguoi choi.',
+        'desc' => 'Tạo và quản lý giftcode cho người chơi.',
         'href' => '/admin/giftcode.php',
         'icon' => 'fas fa-gift',
         'meta' => 'Code',
@@ -116,13 +116,13 @@ $quick_items = [
 ];
 
 $sidebar_items = [
-    ['label' => 'Dien dan', 'href' => '/forum.php', 'icon' => 'fas fa-comments'],
-    ['label' => 'Duyet nap', 'href' => '/admin/nap.php', 'icon' => 'fas fa-wallet'],
-    ['label' => 'LSGD game', 'href' => '/admin/lsgd.php', 'icon' => 'fas fa-history'],
+    ['label' => 'Diễn đàn', 'href' => '/forum.php', 'icon' => 'fas fa-comments'],
+    ['label' => 'Duyệt', 'href' => '/admin/nap.php', 'icon' => 'fas fa-wallet'],
+    ['label' => 'Lịch sử GD game', 'href' => '/admin/lsgd.php', 'icon' => 'fas fa-history'],
     ['label' => 'Tiêu Thỏi Vàng', 'href' => '/admin/lich-su-tieu-thoi-vang.php', 'icon' => 'fas fa-coins'],
-    ['label' => 'Nguoi dung', 'href' => '/admin/users.php', 'icon' => 'fas fa-users'],
-    ['label' => 'Nhan vat', 'href' => '/admin/players.php', 'icon' => 'fas fa-user'],
-    ['label' => 'Dang xuat', 'href' => '/admin?out=1', 'icon' => 'fas fa-sign-out-alt'],
+    ['label' => 'Người dùng', 'href' => '/admin/users.php', 'icon' => 'fas fa-users'],
+    ['label' => 'Nhân vật', 'href' => '/admin/players.php', 'icon' => 'fas fa-user'],
+    ['label' => 'Đăng xuất', 'href' => '/admin?out=1', 'icon' => 'fas fa-sign-out-alt'],
 ];
 ?>
 <!DOCTYPE html>
@@ -131,7 +131,7 @@ $sidebar_items = [
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Admin Panel - Lio</title>
-    <meta name="description" content="Bang dieu khien admin Lio">
+    <meta name="description" content="Bảng điều khiển admin Lio">
     <meta name="author" content="Lio">
     <link href="../assets/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="../assets/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
@@ -497,13 +497,13 @@ $sidebar_items = [
                 <div class="brand-mark">L</div>
                 <div>
                     <div class="brand-title">Lio Admin</div>
-                    <div class="brand-sub">Quan tri server</div>
+                    <div class="brand-sub">Quản trị server</div>
                 </div>
             </div>
 
             <div class="nav-label">Menu nhanh</div>
             <nav class="nav-list">
-                <a class="nav-link active" href="/admin"><i class="fas fa-home"></i> Tong quan</a>
+                <a class="nav-link active" href="/admin"><i class="fas fa-home"></i> Tổng quan</a>
                 <?php foreach ($sidebar_items as $item) : ?>
                     <a class="nav-link" href="<?php echo admin_h($item['href']); ?>">
                         <i class="<?php echo admin_h($item['icon']); ?>"></i>
@@ -521,9 +521,9 @@ $sidebar_items = [
         <main class="main">
             <header class="topbar">
                 <div>
-                    <div class="eyebrow">Bang dieu khien</div>
-                    <h1 class="page-title">Tong quan admin</h1>
-                    <p class="page-desc">Quan ly server nhanh, ro rang va de bam hon.</p>
+                    <div class="eyebrow">Bảng điều khiển</div>
+                    <h1 class="page-title">Tổng quan admin</h1>
+                    <p class="page-desc">Quản lý server nhanh, rõ ràng và dễ bấm hơn.</p>
                 </div>
                 <div class="user-chip">
                     <span class="user-dot"></span>
@@ -535,10 +535,10 @@ $sidebar_items = [
                 <div class="stat-card">
                     <div class="stat-top">
                         <div class="stat-icon"><i class="fas fa-users"></i></div>
-                        <div class="stat-note">Tong</div>
+                        <div class="stat-note">Tổng</div>
                     </div>
                     <div class="stat-number"><?php echo number_format($total_accounts); ?></div>
-                    <div class="stat-label">Tai khoan</div>
+                    <div class="stat-label">Tài khoản</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-top">
@@ -546,20 +546,20 @@ $sidebar_items = [
                         <div class="stat-note">Game</div>
                     </div>
                     <div class="stat-number"><?php echo number_format($total_players); ?></div>
-                    <div class="stat-label">Nhan vat</div>
+                    <div class="stat-label">Nhân vật</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-top">
                         <div class="stat-icon"><i class="fas fa-wallet"></i></div>
-                        <div class="stat-note">Can xu ly</div>
+                        <div class="stat-note">Cần xử lý</div>
                     </div>
                     <div class="stat-number"><?php echo number_format($pending_recharges); ?></div>
-                    <div class="stat-label">Nap cho duyet</div>
+                    <div class="stat-label">Chờ duyệt</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-top">
                         <div class="stat-icon"><i class="fas fa-exchange-alt"></i></div>
-                        <div class="stat-note">Hom nay</div>
+                        <div class="stat-note">Hôm nay</div>
                     </div>
                     <div class="stat-number"><?php echo number_format($today_trades); ?></div>
                     <div class="stat-label">GD game</div>
@@ -567,8 +567,8 @@ $sidebar_items = [
             </section>
 
             <div class="toolbar">
-                <h2 class="section-title">Chuc nang quan tri</h2>
-                <div class="toolbar-hint">Bam vao tung muc de mo trang xu ly</div>
+                <h2 class="section-title">Chức năng quản trị</h2>
+                <div class="toolbar-hint">Bấm vào từng mục để mở trang xử lý</div>
             </div>
 
             <section class="actions-grid">

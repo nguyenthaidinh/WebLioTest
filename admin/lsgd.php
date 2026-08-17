@@ -218,7 +218,7 @@ $summary_result = $conn->query("
 if ($summary_result) {
     $summary = array_merge($summary, $summary_result->fetch_assoc());
 } else {
-    $db_error = 'Khong the doc lich su giao dich game: ' . $conn->error;
+    $db_error = 'Không thể đọc lịch sử giao dịch game: ' . $conn->error;
 }
 
 $today_count = 0;
@@ -259,7 +259,7 @@ $transactions = $conn->query("
 ");
 
 if (!$transactions && $db_error === '') {
-    $db_error = 'Khong the doc danh sach giao dich game: ' . $conn->error;
+    $db_error = 'Không thể đọc danh sách giao dịch game: ' . $conn->error;
 }
 ?>
 <!DOCTYPE html>
@@ -331,14 +331,14 @@ if (!$transactions && $db_error === '') {
     <div class="admin-header">
         <div class="container">
             <a href="/admin"><i class="fas fa-arrow-left"></i> Menu admin</a>
-            <a href="/admin/players.php"><i class="fas fa-user"></i> Nhan vat</a>
-            <a href="/admin/nap.php"><i class="fas fa-check-circle"></i> Duyet nap</a>
+            <a href="/admin/players.php"><i class="fas fa-user"></i> Nhân vật</a>
+            <a href="/admin/nap.php"><i class="fas fa-check-circle"></i> Duyệt</a>
         </div>
     </div>
 
     <div class="container" style="max-width: 1280px;">
-        <h1 class="page-title">Lich Su Giao Dich Game</h1>
-        <p class="page-subtitle">Theo doi giao dich doi do giua nguoi choi, item hai ben dua va tui truoc/sau khi giao dich.</p>
+        <h1 class="page-title">Lịch Sử Giao Dịch Game</h1>
+        <p class="page-subtitle">Theo dõi giao dịch đổi đồ giữa người chơi, item hai bên đưa và túi trước/sau khi giao dịch.</p>
 
         <?php if ($db_error !== '') : ?>
             <div class="admin-alert"><?php echo lsgd_h($db_error); ?></div>
@@ -347,19 +347,19 @@ if (!$transactions && $db_error === '') {
         <div class="stats-row">
             <div class="stat-box">
                 <div class="stat-num"><?php echo number_format($total_rows); ?></div>
-                <div class="stat-label">Giao dich trong bo loc</div>
+                <div class="stat-label">Giao dịch trong bộ lọc</div>
             </div>
             <div class="stat-box">
                 <div class="stat-num"><?php echo number_format($today_count); ?></div>
-                <div class="stat-label">Giao dich hom nay</div>
+                <div class="stat-label">Giao dịch hôm nay</div>
             </div>
             <div class="stat-box">
                 <div class="stat-num"><?php echo lsgd_h($summary['latest_time'] ?: '-'); ?></div>
-                <div class="stat-label">Moi nhat</div>
+                <div class="stat-label">Mới nhất</div>
             </div>
             <div class="stat-box">
                 <div class="stat-num"><?php echo $page . '/' . $total_pages; ?></div>
-                <div class="stat-label">Trang hien tai</div>
+                <div class="stat-label">Trang hiện tại</div>
             </div>
         </div>
 
@@ -367,30 +367,30 @@ if (!$transactions && $db_error === '') {
             <form method="get" action="">
                 <div class="filter-grid">
                     <div>
-                        <label for="q">Tim kiem</label>
-                        <input class="form-control" id="q" name="q" value="<?php echo lsgd_h($search); ?>" placeholder="Ten nhan vat, ID giao dich, item, vang...">
+                        <label for="q">Tìm kiếm</label>
+                        <input class="form-control" id="q" name="q" value="<?php echo lsgd_h($search); ?>" placeholder="Tên nhân vật, ID giao dịch, item, vàng...">
                     </div>
                     <div>
-                        <label for="scope">Pham vi</label>
+                        <label for="scope">Phạm vi</label>
                         <select class="form-control" id="scope" name="scope">
-                            <?php foreach (['all' => 'Tat ca', 'players' => 'Nguoi choi', 'items' => 'Item/tui do'] as $key => $label) : ?>
+                            <?php foreach (['all' => 'Tất cả', 'players' => 'Người chơi', 'items' => 'Item/túi đồ'] as $key => $label) : ?>
                                 <option value="<?php echo lsgd_h($key); ?>" <?php echo $scope === $key ? 'selected' : ''; ?>><?php echo lsgd_h($label); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div>
-                        <label for="from">Tu ngay</label>
+                        <label for="from">Từ ngày</label>
                         <input class="form-control" id="from" name="from" type="date" value="<?php echo lsgd_h($date_from); ?>">
                     </div>
                     <div>
-                        <label for="to">Den ngay</label>
+                        <label for="to">Đến ngày</label>
                         <input class="form-control" id="to" name="to" type="date" value="<?php echo lsgd_h($date_to); ?>">
                     </div>
-                    <button class="btn-search" type="submit">Loc</button>
+                    <button class="btn-search" type="submit">Lọc</button>
                 </div>
             </form>
             <?php if ($search !== '' || $scope !== 'all' || $date_from !== '' || $date_to !== '') : ?>
-                <a class="clear-link" href="/admin/lsgd.php"><i class="fas fa-times"></i> Xoa bo loc</a>
+                <a class="clear-link" href="/admin/lsgd.php"><i class="fas fa-times"></i> Xóa bộ lọc</a>
             <?php endif; ?>
         </div>
 
@@ -400,12 +400,12 @@ if (!$transactions && $db_error === '') {
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Thoi gian</th>
-                            <th>Nguoi 1</th>
-                            <th>Nguoi 2</th>
-                            <th>Nguoi 1 dua</th>
-                            <th>Nguoi 2 dua</th>
-                            <th>Tui truoc/sau</th>
+                            <th>Thời gian</th>
+                            <th>Người 1</th>
+                            <th>Người 2</th>
+                            <th>Người 1 đưa</th>
+                            <th>Người 2 đưa</th>
+                            <th>Túi trước/sau</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -425,7 +425,7 @@ if (!$transactions && $db_error === '') {
 
                 <div class="pagination-wrap">
                     <?php if ($page > 1) : ?>
-                        <a href="?<?php echo lsgd_h(lsgd_query_string(['page' => $page - 1])); ?>">Truoc</a>
+                        <a href="?<?php echo lsgd_h(lsgd_query_string(['page' => $page - 1])); ?>">Trước</a>
                     <?php endif; ?>
                     <?php
                         $start_page = max(1, $page - 2);
@@ -437,10 +437,10 @@ if (!$transactions && $db_error === '') {
                     <?php if ($page < $total_pages) : ?>
                         <a href="?<?php echo lsgd_h(lsgd_query_string(['page' => $page + 1])); ?>">Sau</a>
                     <?php endif; ?>
-                    <span><?php echo number_format($total_rows); ?> dong</span>
+                    <span><?php echo number_format($total_rows, 0, ',', '.'); ?> dòng</span>
                 </div>
             <?php else : ?>
-                <div class="empty-state">Khong co giao dich game nao khop voi bo loc.</div>
+                <div class="empty-state">Không có giao dịch game nào khớp với bộ lọc.</div>
             <?php endif; ?>
         </div>
     </div>

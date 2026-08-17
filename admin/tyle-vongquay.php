@@ -153,7 +153,7 @@ $total_weight = lucky_rewards_total_weight($rewards);
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Chỉnh Tỉ Lệ Vòng Quay - Admin</title>
+    <title>Vòng Quay - Admin</title>
     <link href="../assets/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="../assets/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
     <script src="../assets/jquery/jquery.min.js"></script>
@@ -194,7 +194,7 @@ $total_weight = lucky_rewards_total_weight($rewards);
     </div>
 
     <div class="container" style="max-width: 920px;">
-        <h1 class="page-title">Chỉnh Tỉ Lệ Vòng Quay</h1>
+        <h1 class="page-title">Vòng Quay</h1>
         <p class="page-subtitle">Tỉ lệ này chỉ admin thấy. Người chơi chỉ thấy các phần thưởng trên vòng quay.</p>
 
         <?php echo $_alert; ?>
