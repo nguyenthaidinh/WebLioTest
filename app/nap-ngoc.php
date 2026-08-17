@@ -192,14 +192,6 @@ function recharge_status_label($status, $is_credited = 0) {
             margin-bottom: 3px;
             text-transform: uppercase;
         }
-        .event-x2-example {
-            background: rgba(255, 255, 255, 0.14);
-            border-radius: 7px;
-            display: inline-block;
-            font-weight: 900;
-            margin-top: 7px;
-            padding: 6px 9px;
-        }
         .recharge-preview {
             background: #fff7d6;
             border: 1px solid #f4c45e;
@@ -210,41 +202,6 @@ function recharge_status_label($status, $is_credited = 0) {
             line-height: 1.5;
             margin-top: 6px;
             padding: 8px;
-        }
-        .promo-tiers {
-            background: #fff1c7;
-            border: 1px solid #f59e0b;
-            border-radius: 7px;
-            color: #713f12;
-            font-size: 12px;
-            margin-top: 10px;
-            padding: 9px;
-        }
-        .promo-tiers-title {
-            color: #7c2d12;
-            font-weight: 900;
-            margin-bottom: 7px;
-            text-align: center;
-        }
-        .promo-tiers-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
-            gap: 6px;
-        }
-        .promo-tier {
-            align-items: center;
-            background: #fff8ec;
-            border: 1px solid #f6b35d;
-            border-radius: 5px;
-            display: flex;
-            font-weight: 800;
-            gap: 8px;
-            justify-content: space-between;
-            padding: 6px 7px;
-        }
-        .promo-tier span:last-child {
-            color: #dc2626;
-            white-space: nowrap;
         }
         .history-table {
             width: 100%;
@@ -390,9 +347,8 @@ function recharge_status_label($status, $is_credited = 0) {
                                     <div class="manual-recharge-wrap">
                                         <div class="event-x2-notice">
                                             <strong><i class="fas fa-gift"></i> Sự kiện nạp tiền x2</strong>
-                                            Hưởng ứng đại hội sự kiện “Bị chặn hay chỉ là cuộc dạo chơi”, mọi giao dịch nạp tiền được nhân đôi giá trị.
+                                            Hưởng ứng đại hội sự kiện “Bị chan hay chỉ là cuộc dạo chơi”, mọi giao dịch nạp tiền được nhân đôi giá trị.
                                             Phần trăm khuyến mãi được tính tiếp trên chính số tiền sau x2.
-                                            <div class="event-x2-example">Ví dụ: nạp 1.000.000 → x2 thành 2.000.000 → KM 70% thêm 1.400.000 → tổng nhận 3.400.000 VND</div>
                                         </div>
                                         <?php if (!$is_logged_in) : ?>
                                             <div class="recharge-panel" style="text-align:center; font-weight:800;">
@@ -434,17 +390,6 @@ function recharge_status_label($status, $is_credited = 0) {
                                                             <button class="copy-btn" type="button" data-copy="<?php echo htmlspecialchars($transfer_content); ?>">Copy</button>
                                                         </div>
                                                         <p class="recharge-note">Mỗi 10.000 VND thực nạp = 1 lượt quay may mắn.</p>
-                                                        <div class="promo-tiers">
-                                                            <div class="promo-tiers-title">Khuyến mãi tính trên giá trị sau x2</div>
-                                                            <div class="promo-tiers-grid">
-                                                                <?php foreach (array_reverse(recharge_bonus_tiers(), true) as $threshold => $rate) : ?>
-                                                                    <div class="promo-tier">
-                                                                        <span>Nạp từ <?php echo number_format(recharge_paid_amount_for_tier($threshold), 0, ',', '.'); ?></span>
-                                                                        <span>x2 → <?php echo number_format((int)$threshold, 0, ',', '.'); ?>: +<?php echo (int)$rate; ?>%</span>
-                                                                    </div>
-                                                                <?php endforeach; ?>
-                                                            </div>
-                                                        </div>
                                                         <p class="recharge-note">Sau khi chuyển khoản, nhập số tiền và mã giao dịch/nội dung chuyển khoản để admin kiểm tra rồi duyệt VND.</p>
                                                     </div>
                                                 </div>
