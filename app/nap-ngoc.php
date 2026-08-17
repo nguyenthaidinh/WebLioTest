@@ -28,22 +28,6 @@ if ($has_qr_image) {
 }
 $transfer_content = 'Hãy để mặc định';
 
-function recharge_status_label($status, $is_credited = 0) {
-    $status = strtolower((string)$status);
-    if ($is_credited || $status === 'success') {
-        return ['Da duyet', '#16a34a'];
-    }
-    if ($status === 'pending') {
-        return ['Cho admin duyet', '#f59e0b'];
-    }
-    if ($status === 'rejected') {
-        return ['Da tu choi', '#dc2626'];
-    }
-    if ($status === 'failed') {
-        return ['That bai', '#dc2626'];
-    }
-    return ['Dang xu ly', '#64748b'];
-}
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -203,55 +187,6 @@ function recharge_status_label($status, $is_credited = 0) {
             margin-top: 6px;
             padding: 8px;
         }
-        .history-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: #fff;
-            border-radius: 8px;
-            overflow: hidden;
-            font-size: 12px;
-        }
-        .history-table th {
-            background: #b65d2f;
-            color: #fff;
-            padding: 9px 6px;
-            text-align: center;
-        }
-        .history-table td {
-            color: #111827;
-            border-bottom: 1px solid #f0dfc2;
-            padding: 8px 6px;
-            text-align: center;
-            vertical-align: middle;
-        }
-        .status-pill {
-            display: inline-block;
-            color: #fff;
-            border-radius: 999px;
-            padding: 3px 8px;
-            font-weight: 800;
-            font-size: 11px;
-            white-space: nowrap;
-        }
-        .pagination2 {
-            text-align: center;
-            padding: 12px 0 0;
-        }
-        .pagination2 a {
-            display: inline-block;
-            padding: 5px 10px;
-            margin: 2px;
-            border: 1px solid #f97316;
-            border-radius: 5px;
-            color: #f97316;
-            text-decoration: none;
-            font-weight: 800;
-            background: #fff;
-        }
-        .pagination2 a.active {
-            color: #fff;
-            background: #f97316;
-        }
         @media (max-width: 640px) {
             .recharge-grid,
             .bank-line {
@@ -259,13 +194,6 @@ function recharge_status_label($status, $is_credited = 0) {
             }
             .copy-btn {
                 width: 100%;
-            }
-            .history-table {
-                font-size: 11px;
-            }
-            .history-table th,
-            .history-table td {
-                padding: 7px 4px;
             }
         }
     </style>
@@ -413,43 +341,6 @@ function recharge_status_label($status, $is_credited = 0) {
                                             </div>
                                         <?php endif; ?>
 
-                                        <div class="recharge-panel">
-                                            <h3 style="margin: 0 0 10px; color:#7c2d12; text-align:center;">Lịch Sử Nạp Tiền</h3>
-                                            <table class="history-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Thời gian</th>
-                                                        <th>Số tiền</th>
-                                                        <th>Trạng thái</th>
-                                                        <th>Ghi chú</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <?php if (!empty($history_bank_transfers)) : ?>
-                                                        <?php foreach ($history_bank_transfers as $transfer) : ?>
-                                                            <?php [$status_text, $status_color] = recharge_status_label($transfer['status'] ?? '', $transfer['is_credited'] ?? 0); ?>
-                                                            <tr>
-                                                                <td><?php echo htmlspecialchars($transfer['created_at']); ?></td>
-                                                                <td><?php echo number_format((int)$transfer['amount'], 0, ',', '.'); ?> VND</td>
-                                                                <td><span class="status-pill" style="background: <?php echo htmlspecialchars($status_color); ?>;"><?php echo htmlspecialchars($status_text); ?></span></td>
-                                                                <td><?php echo htmlspecialchars($transfer['description'] ?? ''); ?></td>
-                                                            </tr>
-                                                        <?php endforeach; ?>
-                                                    <?php else : ?>
-                                                        <tr>
-                                                            <td colspan="4">Chưa có yêu cầu nạp tiền.</td>
-                                                        </tr>
-                                                    <?php endif; ?>
-                                                </tbody>
-                                            </table>
-                                            <?php if ($total_pages_transfer > 1) : ?>
-                                                <div class="pagination2">
-                                                    <?php for ($i = 1; $i <= $total_pages_transfer; $i++) : ?>
-                                                        <a class="<?php echo $i === $current_page_transfer ? 'active' : ''; ?>" href="?page_transfer=<?php echo $i; ?>"><?php echo $i; ?></a>
-                                                    <?php endfor; ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
