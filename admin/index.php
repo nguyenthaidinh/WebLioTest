@@ -29,6 +29,7 @@ $total_accounts = admin_count_query($conn, "SELECT COUNT(*) FROM account");
 $total_players = admin_count_query($conn, "SELECT COUNT(*) FROM player");
 $pending_recharges = admin_count_query($conn, "SELECT COUNT(*) FROM bank_transfers WHERE status = 'pending' AND is_credited = 0");
 $today_trades = admin_count_query($conn, "SELECT COUNT(*) FROM history_transaction WHERE time_tran >= CURDATE() AND time_tran < DATE_ADD(CURDATE(), INTERVAL 1 DAY)");
+$today_gold_spends = admin_count_query($conn, "SELECT COUNT(*) FROM gold_bar_spend_history WHERE created_at >= CURDATE() AND created_at < DATE_ADD(CURDATE(), INTERVAL 1 DAY)");
 
 $admin_name = $_username ?? 'admin';
 $quick_items = [
@@ -46,6 +47,14 @@ $quick_items = [
         'href' => '/admin/lsgd.php',
         'icon' => 'fas fa-history',
         'meta' => $today_trades . ' hom nay',
+        'priority' => false,
+    ],
+    [
+        'title' => 'Lịch sử tiêu Thỏi Vàng',
+        'desc' => 'Đối soát từng lần người chơi tiêu Thỏi Vàng trong 3 ngày gần nhất.',
+        'href' => '/admin/lich-su-tieu-thoi-vang.php',
+        'icon' => 'fas fa-coins',
+        'meta' => number_format($today_gold_spends, 0, ',', '.') . ' lượt hôm nay',
         'priority' => false,
     ],
     [
@@ -110,6 +119,7 @@ $sidebar_items = [
     ['label' => 'Dien dan', 'href' => '/forum.php', 'icon' => 'fas fa-comments'],
     ['label' => 'Duyet nap', 'href' => '/admin/nap.php', 'icon' => 'fas fa-wallet'],
     ['label' => 'LSGD game', 'href' => '/admin/lsgd.php', 'icon' => 'fas fa-history'],
+    ['label' => 'Tiêu Thỏi Vàng', 'href' => '/admin/lich-su-tieu-thoi-vang.php', 'icon' => 'fas fa-coins'],
     ['label' => 'Nguoi dung', 'href' => '/admin/users.php', 'icon' => 'fas fa-users'],
     ['label' => 'Nhan vat', 'href' => '/admin/players.php', 'icon' => 'fas fa-user'],
     ['label' => 'Dang xuat', 'href' => '/admin?out=1', 'icon' => 'fas fa-sign-out-alt'],
