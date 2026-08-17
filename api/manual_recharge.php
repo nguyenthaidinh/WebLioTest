@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 include_once '../connect.php';
+include_once '../recharge_bonus.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 
@@ -114,9 +115,20 @@ $stmt_insert->bind_param(
 );
 
 if ($stmt_insert->execute()) {
+    $event_amount = recharge_event_amount($amount);
+    $bonus_rate = recharge_bonus_rate($amount);
+    $bonus_amount = recharge_bonus_amount($amount);
+    $credit_amount = recharge_credit_amount($amount);
     $response['success'] = true;
-    $response['message'] = 'Da gui yeu cau nap tien. Vui long cho admin duyet.';
+    $response['message'] = 'Đã gửi yêu cầu nạp tiền. Sau khi duyệt: '
+        . number_format($amount, 0, ',', '.') . ' VND x2 thành '
+        . number_format($event_amount, 0, ',', '.') . ' VND, khuyến mãi '
+        . $bonus_rate . '% thêm ' . number_format($bonus_amount, 0, ',', '.')
+        . ' VND, tổng nhận ' . number_format($credit_amount, 0, ',', '.') . ' VND.';
     $response['transaction_id'] = $transaction_id;
+    $response['event_amount'] = $event_amount;
+    $response['bonus_amount'] = $bonus_amount;
+    $response['credit_amount'] = $credit_amount;
 } else {
     $response['message'] = 'Loi khi luu yeu cau nap tien: ' . $stmt_insert->error;
 }

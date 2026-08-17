@@ -174,6 +174,43 @@ function recharge_status_label($status, $is_credited = 0) {
             line-height: 1.5;
             margin: 8px 0 0;
         }
+        .event-x2-notice {
+            background: linear-gradient(135deg, #991b1b, #ea580c);
+            border: 2px solid #fde047;
+            border-radius: 10px;
+            box-shadow: 0 6px 18px rgba(153, 27, 27, 0.24);
+            color: #fff;
+            line-height: 1.55;
+            margin-bottom: 14px;
+            padding: 12px 14px;
+            text-align: center;
+        }
+        .event-x2-notice strong {
+            color: #fef08a;
+            display: block;
+            font-size: 17px;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+        }
+        .event-x2-example {
+            background: rgba(255, 255, 255, 0.14);
+            border-radius: 7px;
+            display: inline-block;
+            font-weight: 900;
+            margin-top: 7px;
+            padding: 6px 9px;
+        }
+        .recharge-preview {
+            background: #fff7d6;
+            border: 1px solid #f4c45e;
+            border-radius: 6px;
+            color: #7c2d12;
+            font-size: 12px;
+            font-weight: 800;
+            line-height: 1.5;
+            margin-top: 6px;
+            padding: 8px;
+        }
         .promo-tiers {
             background: #fff1c7;
             border: 1px solid #f59e0b;
@@ -351,6 +388,12 @@ function recharge_status_label($status, $is_credited = 0) {
                                     </table>
 
                                     <div class="manual-recharge-wrap">
+                                        <div class="event-x2-notice">
+                                            <strong><i class="fas fa-gift"></i> Sự kiện nạp tiền x2</strong>
+                                            Hưởng ứng đại hội sự kiện “Bị chặn hay chỉ là cuộc dạo chơi”, mọi giao dịch nạp tiền được nhân đôi giá trị.
+                                            Phần trăm khuyến mãi được tính tiếp trên chính số tiền sau x2.
+                                            <div class="event-x2-example">Ví dụ: nạp 1.000.000 → x2 thành 2.000.000 → KM 70% thêm 1.400.000 → tổng nhận 3.400.000 VND</div>
+                                        </div>
                                         <?php if (!$is_logged_in) : ?>
                                             <div class="recharge-panel" style="text-align:center; font-weight:800;">
                                                 Bạn cần đăng nhập để gửi yêu cầu nạp tiền.
@@ -390,14 +433,14 @@ function recharge_status_label($status, $is_credited = 0) {
                                                             <span class="bank-value" id="transferContent"><?php echo htmlspecialchars($transfer_content); ?></span>
                                                             <button class="copy-btn" type="button" data-copy="<?php echo htmlspecialchars($transfer_content); ?>">Copy</button>
                                                         </div>
-                                                        <p class="recharge-note">Tích lũy 10.000 = 1 lượt quay may mắn.</p>
+                                                        <p class="recharge-note">Mỗi 10.000 VND thực nạp = 1 lượt quay may mắn.</p>
                                                         <div class="promo-tiers">
-                                                            <div class="promo-tiers-title">Khuyến mãi nạp tiền</div>
+                                                            <div class="promo-tiers-title">Khuyến mãi tính trên giá trị sau x2</div>
                                                             <div class="promo-tiers-grid">
                                                                 <?php foreach (array_reverse(recharge_bonus_tiers(), true) as $threshold => $rate) : ?>
                                                                     <div class="promo-tier">
-                                                                        <span>Từ <?php echo number_format((int)$threshold, 0, ',', '.'); ?></span>
-                                                                        <span>+<?php echo (int)$rate; ?>%</span>
+                                                                        <span>Nạp từ <?php echo number_format(recharge_paid_amount_for_tier($threshold), 0, ',', '.'); ?></span>
+                                                                        <span>x2 → <?php echo number_format((int)$threshold, 0, ',', '.'); ?>: +<?php echo (int)$rate; ?>%</span>
                                                                     </div>
                                                                 <?php endforeach; ?>
                                                             </div>
@@ -413,6 +456,7 @@ function recharge_status_label($status, $is_credited = 0) {
                                                     <div>
                                                         <label for="amount">Số tiền đã chuyển</label>
                                                         <input id="amount" name="amount" type="number" min="10000" step="1000" placeholder="Ví dụ: 50000" required>
+                                                        <div id="rechargePreview" class="recharge-preview">Nhập số tiền để xem giá trị x2 và tổng khuyến mãi.</div>
                                                     </div>
                                                     <div>
                                                         <label for="transfer_note">Mã giao dịch hoặc ghi chú</label>
@@ -483,6 +527,41 @@ function recharge_status_label($status, $is_credited = 0) {
                     <script src="/view/static/js/animation.js?v5" type="text/javascript"></script>
                     <script>
                         $(document).ready(function() {
+                            var rechargeMultiplier = <?php echo (int)recharge_event_multiplier(); ?>;
+                            var rechargeTiers = [
+                                <?php foreach (recharge_bonus_tiers() as $threshold => $rate) : ?>
+                                    { threshold: <?php echo (int)$threshold; ?>, rate: <?php echo (int)$rate; ?> },
+                                <?php endforeach; ?>
+                            ];
+                            var moneyFormatter = new Intl.NumberFormat('vi-VN');
+
+                            function updateRechargePreview() {
+                                var paidAmount = Number($('#amount').val() || 0);
+                                var preview = $('#rechargePreview');
+                                if (!Number.isFinite(paidAmount) || paidAmount <= 0) {
+                                    preview.text('Nhập số tiền để xem giá trị x2 và tổng khuyến mãi.');
+                                    return;
+                                }
+
+                                var eventAmount = Math.floor(paidAmount) * rechargeMultiplier;
+                                var bonusRate = 0;
+                                for (var i = 0; i < rechargeTiers.length; i++) {
+                                    if (eventAmount >= rechargeTiers[i].threshold) {
+                                        bonusRate = rechargeTiers[i].rate;
+                                        break;
+                                    }
+                                }
+                                var bonusAmount = Math.floor(eventAmount * bonusRate / 100);
+                                var totalAmount = eventAmount + bonusAmount;
+                                preview.text(
+                                    'Sau x2: ' + moneyFormatter.format(eventAmount)
+                                    + ' VND · KM ' + bonusRate + '%: +' + moneyFormatter.format(bonusAmount)
+                                    + ' VND · Tổng nhận: ' + moneyFormatter.format(totalAmount) + ' VND'
+                                );
+                            }
+
+                            $('#amount').on('input', updateRechargePreview);
+
                             $('.copy-btn').on('click', function() {
                                 var text = $(this).data('copy') || '';
                                 if (!text) {

@@ -14,6 +14,17 @@ if (empty($_SESSION['admin_recharge_csrf'])) {
 
 $csrf_token = $_SESSION['admin_recharge_csrf'];
 $_alert = '';
+$credit_history_ready = false;
+
+try {
+    $credit_history_ready = recharge_ensure_credit_history_table($conn);
+} catch (Throwable $e) {
+    error_log('Khong the khoi tao bang recharge_credit_history: ' . $e->getMessage());
+}
+
+if (!$credit_history_ready) {
+    $_alert = admin_set_alert('Chưa thể khởi tạo bảng đối soát nạp tiền. Tạm khóa thao tác duyệt để tránh cộng tiền thiếu lịch sử.', 'error');
+}
 
 function admin_recharge_status_label($status, $is_credited = 0) {
     $status = strtolower((string)$status);
@@ -37,7 +48,7 @@ function admin_set_alert($message, $type = 'success') {
     return '<div class="admin-alert ' . $class . '">' . htmlspecialchars($message) . '</div>';
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $credit_history_ready) {
     $posted_token = $_POST['csrf_token'] ?? '';
     if (!hash_equals($csrf_token, $posted_token)) {
         $_alert = admin_set_alert('Phien bao mat khong hop le.', 'error');
@@ -84,7 +95,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($amount <= 0 || $username === '') {
                     throw new Exception('Du lieu yeu cau khong hop le.');
                 }
-                $default_bonus_spins = intdiv($amount, 10000);
+                $event_amount = recharge_event_amount($amount);
+                $total_recharge_increment = $amount;
+                $default_bonus_spins = recharge_default_bonus_spins($amount);
                 $posted_bonus_spins = $_POST['bonus_spins'] ?? $default_bonus_spins;
                 if (is_array($posted_bonus_spins)) {
                     throw new Exception('So luot quay khong hop le.');
@@ -102,27 +115,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$stmt_update_account) {
                     throw new Exception('Loi prepare cong tien: ' . $conn->error);
                 }
-                $stmt_update_account->bind_param("iiis", $credit_amount, $amount, $bonus_spins, $username);
+                $stmt_update_account->bind_param("iiis", $credit_amount, $total_recharge_increment, $bonus_spins, $username);
                 $stmt_update_account->execute();
                 if ($stmt_update_account->affected_rows === 0) {
                     throw new Exception('Khong tim thay tai khoan de cong tien.');
                 }
                 $stmt_update_account->close();
 
-                $stmt_update_request = $conn->prepare("UPDATE bank_transfers SET status = 'success', is_credited = 1 WHERE id = ?");
+                $event_multiplier = recharge_event_multiplier();
+                $credited_by = $_username ?? 'admin';
+                $stmt_insert_history = $conn->prepare("
+                    INSERT INTO recharge_credit_history (
+                        bank_transfer_id, paid_amount, event_multiplier, event_amount,
+                        bonus_rate, bonus_amount, credited_amount, total_recharge_increment,
+                        bonus_spins, credited_by
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+                if (!$stmt_insert_history) {
+                    throw new Exception('Lỗi chuẩn bị lưu đối soát nạp tiền: ' . $conn->error);
+                }
+                $stmt_insert_history->bind_param(
+                    "iiiiiiiiis",
+                    $request_id,
+                    $amount,
+                    $event_multiplier,
+                    $event_amount,
+                    $bonus_rate,
+                    $bonus_amount,
+                    $credit_amount,
+                    $total_recharge_increment,
+                    $bonus_spins,
+                    $credited_by
+                );
+                $stmt_insert_history->execute();
+                $stmt_insert_history->close();
+
+                $stmt_update_request = $conn->prepare("UPDATE bank_transfers SET status = 'success', is_credited = 1 WHERE id = ? AND is_credited = 0");
                 if (!$stmt_update_request) {
                     throw new Exception('Loi prepare cap nhat yeu cau: ' . $conn->error);
                 }
                 $stmt_update_request->bind_param("i", $request_id);
                 $stmt_update_request->execute();
+                if ($stmt_update_request->affected_rows !== 1) {
+                    $stmt_update_request->close();
+                    throw new Exception('Yêu cầu đã được xử lý hoặc không thể cập nhật trạng thái.');
+                }
                 $stmt_update_request->close();
 
                 $conn->commit();
                 $_alert = admin_set_alert(
-                    'Da duyet va cong ' . number_format($credit_amount, 0, ',', '.') . ' VND'
-                    . ' (goc ' . number_format($amount, 0, ',', '.')
-                    . ' + KM ' . $bonus_rate . '% = ' . number_format($bonus_amount, 0, ',', '.') . '), them '
-                    . number_format($bonus_spins, 0, ',', '.') . ' luot quay cho ' . $username . '.'
+                    'Đã duyệt nạp ' . number_format($amount, 0, ',', '.') . ' VND cho ' . $username
+                    . ': x2 thành ' . number_format($event_amount, 0, ',', '.') . ' VND'
+                    . ', khuyến mãi ' . $bonus_rate . '% trên số sau x2 = +' . number_format($bonus_amount, 0, ',', '.') . ' VND'
+                    . ', tổng cộng ' . number_format($credit_amount, 0, ',', '.') . ' VND.'
+                    . ' Tổng nạp thực tế +' . number_format($total_recharge_increment, 0, ',', '.')
+                    . ' và thêm ' . number_format($bonus_spins, 0, ',', '.') . ' lượt quay.'
                 );
             } catch (Exception $e) {
                 $conn->rollback();
@@ -140,7 +187,7 @@ if (!in_array($status_filter, $allowed_statuses, true)) {
 
 $where_sql = '';
 if ($status_filter !== 'all') {
-    $where_sql = "WHERE status = '" . $conn->real_escape_string($status_filter) . "'";
+    $where_sql = "WHERE b.status = '" . $conn->real_escape_string($status_filter) . "'";
 }
 
 $stats = [
@@ -158,14 +205,40 @@ if ($stats_result) {
     }
 }
 
+$history_select = $credit_history_ready
+    ? ", h.event_multiplier AS saved_event_multiplier,
+         h.event_amount AS saved_event_amount,
+         h.bonus_rate AS saved_bonus_rate,
+         h.bonus_amount AS saved_bonus_amount,
+         h.credited_amount AS saved_credited_amount,
+         h.total_recharge_increment AS saved_total_recharge_increment,
+         h.bonus_spins AS saved_bonus_spins,
+         h.credited_by AS saved_credited_by,
+         h.credited_at AS saved_credited_at"
+    : ", NULL AS saved_event_multiplier,
+         NULL AS saved_event_amount,
+         NULL AS saved_bonus_rate,
+         NULL AS saved_bonus_amount,
+         NULL AS saved_credited_amount,
+         NULL AS saved_total_recharge_increment,
+         NULL AS saved_bonus_spins,
+         NULL AS saved_credited_by,
+         NULL AS saved_credited_at";
+$history_join = $credit_history_ready
+    ? "LEFT JOIN recharge_credit_history h ON h.bank_transfer_id = b.id"
+    : "";
+
 $requests = $conn->query("
-    SELECT id, transaction_id, username, amount, description, status, sender_bank_name, created_at, is_credited
-    FROM bank_transfers
+    SELECT b.id, b.transaction_id, b.username, b.amount, b.description, b.status,
+           b.sender_bank_name, b.created_at, b.is_credited
+           $history_select
+    FROM bank_transfers b
+    $history_join
     $where_sql
     ORDER BY
-        CASE WHEN status = 'pending' THEN 0 ELSE 1 END,
-        created_at DESC,
-        id DESC
+        CASE WHEN b.status = 'pending' THEN 0 ELSE 1 END,
+        b.created_at DESC,
+        b.id DESC
     LIMIT 200
 ");
 ?>
@@ -227,7 +300,7 @@ $requests = $conn->query("
 
     <div class="container" style="max-width: 1180px;">
         <h1 class="page-title">Duyệt Nạp Tiền</h1>
-        <p class="page-subtitle">Yêu cầu nạp thủ công chỉ được cộng VND sau khi admin duyệt.</p>
+        <p class="page-subtitle">Sự kiện x2: số dư được nhân đôi trước, sau đó khuyến mãi tiếp tục tính trên giá trị đã nhân đôi.</p>
 
         <?php echo $_alert; ?>
 
@@ -250,8 +323,8 @@ $requests = $conn->query("
                         <tr>
                             <th>ID</th>
                             <th>Tài khoản</th>
-                            <th>Số tiền</th>
-                            <th>VND cộng</th>
+                            <th>Tiền chuyển</th>
+                            <th>Tổng VND cộng</th>
                             <th>Trạng thái</th>
                             <th>Thời gian</th>
                             <th>Mã/Ghi chú</th>
@@ -263,27 +336,45 @@ $requests = $conn->query("
                             <?php
                                 [$label, $class] = admin_recharge_status_label($request['status'], $request['is_credited']);
                                 $request_amount = (int)$request['amount'];
-                                $default_bonus_spins = intdiv($request_amount, 10000);
+                                $event_amount = recharge_event_amount($request_amount);
+                                $total_recharge_increment = $request_amount;
+                                $default_bonus_spins = recharge_default_bonus_spins($request_amount);
                                 $bonus_rate = recharge_bonus_rate($request_amount);
                                 $bonus_amount = recharge_bonus_amount($request_amount);
                                 $credit_amount = recharge_credit_amount($request_amount);
+                                $has_saved_credit = $request['saved_credited_amount'] !== null;
+                                if ($has_saved_credit) {
+                                    $event_amount = (int)$request['saved_event_amount'];
+                                    $total_recharge_increment = (int)$request['saved_total_recharge_increment'];
+                                    $bonus_rate = (int)$request['saved_bonus_rate'];
+                                    $bonus_amount = (int)$request['saved_bonus_amount'];
+                                    $credit_amount = (int)$request['saved_credited_amount'];
+                                    $default_bonus_spins = (int)$request['saved_bonus_spins'];
+                                }
                             ?>
                             <tr>
                                 <td>#<?php echo (int)$request['id']; ?></td>
                                 <td><?php echo htmlspecialchars($request['username']); ?></td>
                                 <td style="color:#4ade80;font-weight:800;"><?php echo number_format($request_amount, 0, ',', '.'); ?> VND</td>
                                 <td style="color:#febb12;font-weight:800;">
-                                    <?php echo number_format($credit_amount, 0, ',', '.'); ?> VND
-                                    <?php if ($bonus_rate > 0) : ?>
-                                        <br><span style="font-size:10px;color:#93c5fd;">KM <?php echo $bonus_rate; ?>%: +<?php echo number_format($bonus_amount, 0, ',', '.'); ?></span>
+                                    <?php if ((int)$request['is_credited'] === 1 && !$has_saved_credit) : ?>
+                                        <span style="color:#fca5a5;">Không xác định</span>
+                                        <br><span style="font-size:10px;color:#fca5a5;">Giao dịch cũ không lưu số tiền thực tế đã cộng</span>
+                                    <?php else : ?>
+                                        <?php echo number_format($credit_amount, 0, ',', '.'); ?> VND
+                                        <br><span style="font-size:10px;color:#93c5fd;">x2: <?php echo number_format($event_amount, 0, ',', '.'); ?> · KM <?php echo $bonus_rate; ?>%: +<?php echo number_format($bonus_amount, 0, ',', '.'); ?></span>
+                                        <br><span style="font-size:10px;color:#c4b5fd;">Tổng nạp thực tế: +<?php echo number_format($total_recharge_increment, 0, ',', '.'); ?></span>
+                                    <?php endif; ?>
+                                    <?php if ($has_saved_credit) : ?>
+                                        <br><span style="font-size:10px;color:#86efac;">Đã lưu đối soát<?php echo $request['saved_credited_by'] ? ' bởi ' . htmlspecialchars($request['saved_credited_by']) : ''; ?></span>
                                     <?php endif; ?>
                                 </td>
                                 <td><span class="status-badge status-<?php echo htmlspecialchars($class); ?>"><?php echo htmlspecialchars($label); ?></span></td>
                                 <td><?php echo htmlspecialchars($request['created_at']); ?></td>
                                 <td style="max-width:320px;word-break:break-word;"><?php echo htmlspecialchars($request['description'] ?: $request['transaction_id']); ?></td>
                                 <td>
-                                    <?php if ((int)$request['is_credited'] === 0 && strtolower((string)$request['status']) !== 'success') : ?>
-                                        <form method="post" style="display:inline;" onsubmit="return confirm('Duyệt và cộng tiền cho tài khoản này?');">
+                                    <?php if ($credit_history_ready && (int)$request['is_credited'] === 0 && strtolower((string)$request['status']) !== 'success') : ?>
+                                        <form method="post" style="display:inline;" onsubmit="return confirm(<?php echo htmlspecialchars(json_encode('Duyệt nạp ' . number_format($request_amount, 0, ',', '.') . ' VND: sau x2 và khuyến mãi sẽ cộng tổng ' . number_format($credit_amount, 0, ',', '.') . ' VND cho ' . $request['username'] . '?', JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>);">
                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                             <input type="hidden" name="request_id" value="<?php echo (int)$request['id']; ?>">
                                             <input type="hidden" name="action" value="approve">
