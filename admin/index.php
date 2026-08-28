@@ -34,6 +34,14 @@ $today_gold_spends = admin_count_query($conn, "SELECT COUNT(*) FROM gold_bar_spe
 $admin_name = $_username ?? 'admin';
 $quick_items = [
     [
+        'title' => 'Đăng bài',
+        'desc' => 'Đăng thông báo/sự kiện lên đầu diễn đàn, hỗ trợ nhiều ảnh.',
+        'href' => '/dang-bai.php',
+        'icon' => 'fas fa-edit',
+        'meta' => 'Diễn đàn',
+        'priority' => true,
+    ],
+    [
         'title' => 'Duyệt',
         'desc' => 'Xử lý các giao dịch nạp tiền đang chờ.',
         'href' => '/admin/nap.php',
@@ -117,6 +125,7 @@ $quick_items = [
 
 $sidebar_items = [
     ['label' => 'Diễn đàn', 'href' => '/forum.php', 'icon' => 'fas fa-comments'],
+    ['label' => 'Đăng bài', 'href' => '/dang-bai.php', 'icon' => 'fas fa-edit'],
     ['label' => 'Duyệt', 'href' => '/admin/nap.php', 'icon' => 'fas fa-wallet'],
     ['label' => 'Lịch sử GD game', 'href' => '/admin/lsgd.php', 'icon' => 'fas fa-history'],
     ['label' => 'Tiêu Thỏi Vàng', 'href' => '/admin/lich-su-tieu-thoi-vang.php', 'icon' => 'fas fa-coins'],

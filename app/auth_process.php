@@ -5,12 +5,22 @@ if (session_status() == PHP_SESSION_NONE) {
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-if (isset($_SESSION['user_id'])) {
-    header('Location: /forum.php');
-    exit();
+$is_post_request = ($_SERVER['REQUEST_METHOD'] === 'POST');
+if ($is_post_request) {
+    header('Content-Type: application/json; charset=UTF-8');
 }
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    header('Content-Type: application/json');
+
+if (isset($_SESSION['user_id'])) {
+    if ($is_post_request) {
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'Bạn đã đăng nhập rồi, đang chuyển về diễn đàn.',
+            'redirect' => '/forum.php'
+        ], JSON_UNESCAPED_UNICODE);
+    } else {
+        header('Location: /forum.php');
+    }
+    exit();
 }
 $host = '127.0.0.1';
 $dbname = 'team2026';

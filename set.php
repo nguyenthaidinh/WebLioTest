@@ -27,13 +27,14 @@ $_username = "Khách";
 $_password = "";
 $_gioithieu = "";
 $_admin = 0;
+$_is_admin = 0;
 $_coin = 0;
 $_tcoin = 0;
 $_status = 0;
 $isPremium_name = '<span style="color:#007BFF;font-weight: bold;"><a href="/active">Kích hoạt ngay</a></span>';
 if ($_username_session !== null && $_user_id_session !== null) {
     if (isset($conn) && $conn instanceof mysqli) {
-        $stmt = $conn->prepare("SELECT id, username, password, gioithieu, admin, vnd, tongnap, active FROM account WHERE id = ? AND username = ? LIMIT 1");
+        $stmt = $conn->prepare("SELECT id, username, password, gioithieu, admin, is_admin, vnd, tongnap, active FROM account WHERE id = ? AND username = ? LIMIT 1");
 
         if ($stmt) {
             $stmt->bind_param("is", $_user_id_session, $_username_session);
@@ -47,7 +48,9 @@ if ($_username_session !== null && $_user_id_session !== null) {
                 $_username = htmlspecialchars((string)($user_arr['username'] ?? ''), ENT_QUOTES, 'UTF-8');
                 $_password = htmlspecialchars((string)($user_arr['password'] ?? ''), ENT_QUOTES, 'UTF-8');
                 $_gioithieu = htmlspecialchars((string)($user_arr['gioithieu'] ?? ''), ENT_QUOTES, 'UTF-8');
-                $_admin = htmlspecialchars((string)($user_arr['admin'] ?? 0), ENT_QUOTES, 'UTF-8');
+                $_admin = (int)($user_arr['admin'] ?? 0);
+                $_is_admin = (int)($user_arr['is_admin'] ?? 0);
+                $_admin = ($_admin === 1 || $_is_admin === 1) ? 1 : 0;
                 $_coin = $user_arr['vnd'];
                 $_tcoin = htmlspecialchars((string)($user_arr['tongnap'] ?? 0), ENT_QUOTES, 'UTF-8');
                 $_status = $user_arr['active'];

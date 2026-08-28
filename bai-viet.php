@@ -180,6 +180,20 @@ require_once 'post_detail_logic.php';
                 margin: 12px 0;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.4);
             }
+            .forum-post-images {
+                display: grid;
+                gap: 10px;
+                margin-top: 14px;
+            }
+            .forum-post-images a {
+                display: block;
+                text-align: center;
+            }
+            .forum-post-images img {
+                height: auto;
+                max-height: 720px;
+                object-fit: contain;
+            }
 
             /* ===== POST META (time, likes) ===== */
             .box_timee_bviet {
@@ -515,8 +529,14 @@ require_once 'post_detail_logic.php';
                                                                 <div class="box_title_bviet"><?php echo htmlspecialchars($post_detail['tieude']); ?></div>
                                                                 <div class="box_ndung_bviet">
                                                                     <?php echo nl2br(htmlspecialchars($post_detail['noidung'])); ?>
-                                                                    <?php if (!empty($post_detail['display_image_path'])): ?>
-                                                                        <br /><center><img src="<?php echo htmlspecialchars($post_detail['display_image_path']); ?>" /></center>
+                                                                    <?php if (!empty($post_detail['display_image_paths'])): ?>
+                                                                        <div class="forum-post-images">
+                                                                            <?php foreach ($post_detail['display_image_paths'] as $image_path): ?>
+                                                                                <a href="<?php echo htmlspecialchars($image_path); ?>" target="_blank" rel="noopener noreferrer">
+                                                                                    <img src="<?php echo htmlspecialchars($image_path); ?>" alt="<?php echo htmlspecialchars($post_detail['tieude']); ?>" loading="lazy" />
+                                                                                </a>
+                                                                            <?php endforeach; ?>
+                                                                        </div>
                                                                     <?php endif; ?>
                                                                 </div>
                                                                 <div class="box_timee_bviet" style="padding:3px;">

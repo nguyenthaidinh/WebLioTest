@@ -24,6 +24,24 @@ function versioned_local_asset_url($web_path) {
     return $web_path . $separator . 'v=' . filemtime($file_path);
 }
 
+function forum_post_image_url($image_source) {
+    $image_source = trim((string)$image_source);
+    if ($image_source === '') {
+        return '';
+    }
+
+    if (filter_var($image_source, FILTER_VALIDATE_URL)) {
+        return $image_source;
+    }
+
+    $image_source = basename(str_replace('\\', '/', $image_source));
+    if ($image_source === '') {
+        return '';
+    }
+
+    return versioned_local_asset_url('/images/forum/' . $image_source);
+}
+
 $logged_in_player_gender = 0;
 $logged_in_player_head = 0;
 $is_admin = 0;
@@ -116,24 +134,25 @@ if ($post_id !== null && isset($conn)) {
             }
             $post_detail['author_avatar_path'] = $author_avatar_src;
             $post_image_raw = $post_detail['image'] ?? null;
-            $post_image_path = '';
+            $post_image_paths = [];
 
             if ($post_image_raw) {
-                $decoded_images = json_decode($post_image_raw);
-                $image_source = '';
-                if (is_array($decoded_images) && !empty($decoded_images)) {
-                    $image_source = $decoded_images[0];
-                } else {
-                    $image_source = $post_image_raw;
-                }
-                if (filter_var($image_source, FILTER_VALIDATE_URL)) {
-                    $post_image_path = $image_source;
-                } else {
-                    $image_source = ltrim(str_replace('\\', '/', (string)$image_source), '/');
-                    $post_image_path = versioned_local_asset_url('/images/forum/' . $image_source);
+                $decoded_images = json_decode((string)$post_image_raw, true);
+                $image_sources = is_array($decoded_images) ? $decoded_images : [$post_image_raw];
+
+                foreach ($image_sources as $image_source) {
+                    if (!is_scalar($image_source)) {
+                        continue;
+                    }
+
+                    $image_path = forum_post_image_url($image_source);
+                    if ($image_path !== '') {
+                        $post_image_paths[] = $image_path;
+                    }
                 }
             }
-            $post_detail['display_image_path'] = $post_image_path;
+            $post_detail['display_image_paths'] = $post_image_paths;
+            $post_detail['display_image_path'] = $post_image_paths[0] ?? '';
         }
         $stmt->close();
     } else {

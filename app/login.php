@@ -3,7 +3,7 @@
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-	<title>Chào mừng bạn đến với Chú Bé Rồng Online - Đăng nhập, Đăng ký</title>
+	<title>Chào mừng bạn đến với Lio Nro - Đăng nhập, Đăng ký</title>
 	<link rel="stylesheet" href="https://forum.ngocrongonline.com/app/view/css/StyleSheet.css" type="text/css" />
 	<link rel="stylesheet" href="https://forum.ngocrongonline.com/app/view/css/template.css" type="text/css" />
 	<script src="/view/static/js/disable_devtools.js"></script>
@@ -411,9 +411,21 @@ $(document).ready(function() {
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error("AJAX Error: ", textStatus, errorThrown, jqXHR.responseText);
                 var messageDiv = $('#loginMessage');
+                var errorMessage = 'Đã xảy ra lỗi kết nối. Vui lòng thử lại sau.';
+
+                if (jqXHR.responseJSON && jqXHR.responseJSON.message) {
+                    errorMessage = jqXHR.responseJSON.message;
+                } else if (jqXHR.responseText) {
+                    var plainText = $('<div>').html(jqXHR.responseText).text().trim();
+                    if (plainText !== '') {
+                        errorMessage = plainText.substring(0, 260);
+                    }
+                }
+
                 messageDiv.css('display', 'block');
+                messageDiv.removeClass('success error');
                 messageDiv.addClass('error');
-                messageDiv.text('Đã xảy ra lỗi kết nối. Vui lòng thử lại sau.');
+                messageDiv.text(errorMessage);
             }
         });
     });

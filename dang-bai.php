@@ -17,6 +17,126 @@ if (isset($_SESSION['alert_message'])) {
     unset($_SESSION['alert_message']);
 }
 
+function forum_has_upload_files($field_name)
+{
+    if (empty($_FILES[$field_name]['name']) || !is_array($_FILES[$field_name]['name'])) {
+        return false;
+    }
+
+    foreach ($_FILES[$field_name]['name'] as $name) {
+        if (trim((string)$name) !== '') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function forum_delete_uploaded_images($filenames)
+{
+    $upload_dir = __DIR__ . '/images/forum';
+    foreach ($filenames as $filename) {
+        $safe_name = basename((string)$filename);
+        if ($safe_name === '') {
+            continue;
+        }
+
+        $path = $upload_dir . DIRECTORY_SEPARATOR . $safe_name;
+        if (is_file($path)) {
+            @unlink($path);
+        }
+    }
+}
+
+function forum_upload_post_images($field_name, &$errors)
+{
+    $uploaded = [];
+    if (!forum_has_upload_files($field_name)) {
+        return $uploaded;
+    }
+
+    $upload_dir = __DIR__ . '/images/forum';
+    if (!is_dir($upload_dir) && !mkdir($upload_dir, 0755, true)) {
+        $errors[] = 'Không thể tạo thư mục lưu ảnh bài viết.';
+        return $uploaded;
+    }
+
+    if (!is_writable($upload_dir)) {
+        $errors[] = 'Thư mục lưu ảnh bài viết chưa có quyền ghi.';
+        return $uploaded;
+    }
+
+    $allowed_extensions = [
+        'jpg' => ['image/jpeg', 'image/pjpeg'],
+        'jpeg' => ['image/jpeg', 'image/pjpeg'],
+        'png' => ['image/png', 'image/x-png'],
+        'gif' => ['image/gif'],
+        'webp' => ['image/webp'],
+    ];
+    $max_files = 10;
+    $max_size = 5 * 1024 * 1024;
+    $names = $_FILES[$field_name]['name'];
+    $file_count = count($names);
+
+    if ($file_count > $max_files) {
+        $errors[] = 'Chỉ được tải tối đa ' . $max_files . ' ảnh trong một bài viết.';
+        return $uploaded;
+    }
+
+    for ($i = 0; $i < $file_count; $i++) {
+        $original_name = trim((string)($_FILES[$field_name]['name'][$i] ?? ''));
+        $error_code = (int)($_FILES[$field_name]['error'][$i] ?? UPLOAD_ERR_NO_FILE);
+
+        if ($original_name === '' && $error_code === UPLOAD_ERR_NO_FILE) {
+            continue;
+        }
+
+        if ($error_code !== UPLOAD_ERR_OK) {
+            $errors[] = 'Ảnh "' . htmlspecialchars($original_name, ENT_QUOTES, 'UTF-8') . '" tải lên không thành công.';
+            continue;
+        }
+
+        $tmp_name = $_FILES[$field_name]['tmp_name'][$i] ?? '';
+        $file_size = (int)($_FILES[$field_name]['size'][$i] ?? 0);
+
+        if ($file_size <= 0 || $file_size > $max_size) {
+            $errors[] = 'Ảnh "' . htmlspecialchars($original_name, ENT_QUOTES, 'UTF-8') . '" vượt quá dung lượng 5MB.';
+            continue;
+        }
+
+        $extension = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
+        if (!isset($allowed_extensions[$extension])) {
+            $errors[] = 'Ảnh "' . htmlspecialchars($original_name, ENT_QUOTES, 'UTF-8') . '" không đúng định dạng. Chỉ nhận JPG, PNG, GIF, WEBP.';
+            continue;
+        }
+
+        $mime_type = '';
+        if (class_exists('finfo')) {
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mime_type = (string)$finfo->file($tmp_name);
+        } elseif (function_exists('mime_content_type')) {
+            $mime_type = (string)mime_content_type($tmp_name);
+        }
+
+        if ($mime_type !== '' && !in_array($mime_type, $allowed_extensions[$extension], true)) {
+            $errors[] = 'Ảnh "' . htmlspecialchars($original_name, ENT_QUOTES, 'UTF-8') . '" không phải file ảnh hợp lệ.';
+            continue;
+        }
+
+        $new_name = 'post_' . date('Ymd_His') . '_' . bin2hex(random_bytes(6)) . '.' . $extension;
+        $target_path = $upload_dir . DIRECTORY_SEPARATOR . $new_name;
+
+        if (!move_uploaded_file($tmp_name, $target_path)) {
+            $errors[] = 'Không thể lưu ảnh "' . htmlspecialchars($original_name, ENT_QUOTES, 'UTF-8') . '".';
+            continue;
+        }
+
+        $uploaded[] = $new_name;
+    }
+
+    return $uploaded;
+}
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $tieude = htmlspecialchars(trim((string)($_POST["tieude"] ?? '')), ENT_QUOTES, 'UTF-8');
     $noidung = htmlspecialchars(trim((string)($_POST["noidung"] ?? '')), ENT_QUOTES, 'UTF-8');
@@ -27,6 +147,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if (!isset($_username)) {
             $_alert = "<div class='alert alert-danger'>Lỗi: Không thể xác định tên người dùng. Vui lòng đăng nhập lại.</div>";
         } else {
+            $is_admin_post = ((int)$_admin === 1);
+            $upload_errors = [];
+            $uploaded_images = [];
+
+            if (!$is_admin_post && forum_has_upload_files('post_images')) {
+                $upload_errors[] = 'Chỉ admin mới được đăng bài kèm ảnh.';
+            }
+
+            if ($is_admin_post) {
+                $uploaded_images = forum_upload_post_images('post_images', $upload_errors);
+            }
+
+            if (!empty($upload_errors)) {
+                forum_delete_uploaded_images($uploaded_images);
+                $_alert = "<div class='alert alert-danger'>" . implode('<br>', $upload_errors) . "</div>";
+            } else {
             $stmt_player_name = $conn->prepare("SELECT p.name FROM player p JOIN account a ON a.id = p.account_id WHERE a.username = ?");
             if (!$stmt_player_name) {
                 $_alert = "<div class='alert alert-danger'>Lỗi chuẩn bị câu lệnh SQL lấy tên người chơi: " . $conn->error . "</div>";
@@ -40,12 +176,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $stmt_player_name->close();
 
                 // Admin posts are auto-pinned (ghimbai=1) to appear in the top section
-                $ghimbai_value = ($_admin == 1) ? 1 : 0;
-                $stmt_insert_post = $conn->prepare("INSERT INTO posts (tieude, noidung, username, ghimbai) VALUES (?, ?, ?, ?)");
+                $ghimbai_value = $is_admin_post ? 1 : 0;
+                $image_value = !empty($uploaded_images)
+                    ? json_encode($uploaded_images, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                    : null;
+                $stmt_insert_post = $conn->prepare("INSERT INTO posts (tieude, noidung, username, ghimbai, image) VALUES (?, ?, ?, ?, ?)");
                 if (!$stmt_insert_post) {
+                    forum_delete_uploaded_images($uploaded_images);
                     $_alert = "<div class='alert alert-danger'>Lỗi chuẩn bị câu lệnh SQL đăng bài: " . $conn->error . "</div>";
                 } else {
-                    $stmt_insert_post->bind_param("sssi", $tieude, $noidung, $_name, $ghimbai_value);
+                    $stmt_insert_post->bind_param("sssis", $tieude, $noidung, $_name, $ghimbai_value, $image_value);
 
                     if ($stmt_insert_post->execute()) {
                         $stmt_update_tichdiem = $conn->prepare("UPDATE account SET tichdiem = tichdiem + 1 WHERE username = ?");
@@ -61,10 +201,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         header("Location: /forum.php");
                         exit();
                     } else {
+                        forum_delete_uploaded_images($uploaded_images);
                         $_alert = "<div class='alert alert-danger'>Lỗi khi đăng bài viết: " . $stmt_insert_post->error . "</div>";
                     }
                     $stmt_insert_post->close();
                 }
+            }
             }
         }
     }
@@ -238,6 +380,26 @@ mysqli_close($conn);
         box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.16);
     }
 
+    .file-help {
+        display: block;
+        margin-top: 6px;
+        color: #8b5a2b;
+        font-size: 12px;
+        line-height: 1.45;
+    }
+
+    .admin-post-note {
+        margin: 8px 0 12px;
+        padding: 9px 10px;
+        border: 1px solid #f5b85b;
+        border-radius: 8px;
+        background: #fff4cf;
+        color: #8a3100;
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 1.45;
+    }
+
     .form-actions {
         display: flex;
         justify-content: center;
@@ -354,7 +516,7 @@ mysqli_close($conn);
                             <div class="post-panel">
                                 <h2>Đăng Bài Viết Mới</h2>
                                 <p class="post-help">Điền tiêu đề và nội dung bài viết của bạn.</p>
-                                <form id="postForm" method="POST" action="">
+                                <form id="postForm" method="POST" action="" enctype="multipart/form-data">
                                     <div class="form-field">
                                         <label for="tieude">Tiêu đề</label>
                                         <input class="form-control" id="tieude" name="tieude" type="text" value="" maxlength="120" required />
@@ -363,6 +525,16 @@ mysqli_close($conn);
                                         <label for="noidung">Nội dung</label>
                                         <textarea class="form-control" id="noidung" name="noidung" rows="8" required></textarea>
                                     </div>
+                                    <?php if ((int)$_admin === 1): ?>
+                                        <div class="form-field">
+                                            <label for="post_images">Ảnh bài viết</label>
+                                            <input class="form-control" id="post_images" name="post_images[]" type="file" accept="image/jpeg,image/png,image/gif,image/webp" multiple />
+                                            <small class="file-help">Chọn nhiều ảnh cùng lúc. Hỗ trợ JPG, PNG, GIF, WEBP; tối đa 10 ảnh, mỗi ảnh tối đa 5MB.</small>
+                                        </div>
+                                        <div class="admin-post-note">
+                                            Bài của admin sẽ tự động ghim lên khu vực thông báo phía trên diễn đàn, đúng phần danh sách bạn đang dùng.
+                                        </div>
+                                    <?php endif; ?>
                                     <div id="postMessage" class="message" style="display:none;"></div>
                                     <?php if (!empty($_alert)): ?>
                                         <div class="message <?php echo strpos($_alert, 'alert-success') !== false ? 'success' : 'error'; ?>"
